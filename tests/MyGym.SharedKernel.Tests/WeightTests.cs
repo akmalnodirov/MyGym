@@ -39,6 +39,27 @@ public class WeightTests
         scaled.Unit.ShouldBe(WeightUnit.Kilograms);
     }
 
+    [Fact]
+    public void Scaling_by_a_negative_factor_throws()
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() => Weight.Kg(100m).Scale(-0.5m));
+    }
+
+    [Fact]
+    public void Scaling_by_a_factor_that_exceeds_the_ceiling_throws()
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() => Weight.Kg(900m).Scale(2m));
+    }
+
+    [Fact]
+    public void Scaling_by_zero_produces_zero_weight()
+    {
+        var scaled = Weight.Kg(100m).Scale(0m);
+
+        scaled.Value.ShouldBe(0m);
+        scaled.Unit.ShouldBe(WeightUnit.Kilograms);
+    }
+
     [Theory]
     [InlineData(21.6, 2.5, 20.0)]
     [InlineData(42.4, 2.5, 40.0)]

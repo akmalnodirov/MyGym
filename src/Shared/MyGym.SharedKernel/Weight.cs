@@ -68,7 +68,20 @@ public sealed class Weight : ValueObject, IComparable<Weight>
     public decimal ToKilograms() =>
         Unit == WeightUnit.Kilograms ? Value : Value / PoundsPerKilogram;
 
-    public Weight Scale(decimal factor) => new(Value * factor, Unit);
+    public Weight Scale(decimal factor)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(factor);
+
+        var scaledValue = Value * factor;
+        var scaledKilograms = Unit == WeightUnit.Kilograms ? scaledValue : scaledValue / PoundsPerKilogram;
+
+        if (scaledKilograms > MaximumKilograms)
+            throw new ArgumentOutOfRangeException(
+                nameof(factor),
+                $"Scaling by {factor} produces {scaledKilograms} kg, which exceeds {MaximumKilograms} kg.");
+
+        return new(scaledValue, Unit);
+    }
 
     public Weight RoundDownTo(WeightIncrement increment)
     {
