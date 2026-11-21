@@ -5,10 +5,4 @@
     <ProjectReference Include="..\MyGym.Modules.Training.Contracts\MyGym.Modules.Training.Contracts.csproj" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
 </Project>
