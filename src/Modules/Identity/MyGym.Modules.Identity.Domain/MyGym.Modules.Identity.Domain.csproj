@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\MyGym.SharedKernel\MyGym.SharedKernel.csproj" />
+    <ProjectReference Include="..\MyGym.Modules.Identity.Contracts\MyGym.Modules.Identity.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
