@@ -1,0 +1,22 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+
+# Node / Mini App
+node_modules/
+dist/
+.vite/
+
+# Local config & secrets
+appsettings.*.Local.json
+.env
+.env.local
+*.pfx
+
+# OS
+Thumbs.db
+.DS_Store
