@@ -31,6 +31,33 @@ public class WorkoutSessionTests
         return session;
     }
 
+    private static readonly ExerciseId BaseExerciseId = ExerciseId.New();
+    private static readonly ExerciseId OtherExerciseId = ExerciseId.New();
+    private static readonly RepRange BaseReps = RepRange.Create(6, 8).Value;
+    private static readonly RepRange OtherReps = RepRange.Create(10, 12).Value;
+    private static readonly RestPeriod BaseRest = RestPeriod.Create(TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(3)).Value;
+    private static readonly RestPeriod OtherRest = RestPeriod.Create(TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(2)).Value;
+    private static readonly WarmupRamp BaseWarmup = WarmupRamp.Empty;
+    private static readonly WarmupRamp OtherWarmup =
+        WarmupRamp.Create([WarmupStep.Create(0.5m, 5, isOptional: false).Value]).Value;
+
+    private static PrescriptionSnapshot BuildSnapshot(
+        ExerciseId? exerciseId = null,
+        ExerciseId? alternativeExerciseId = null,
+        int workingSetCount = 3,
+        RepRange? targetReps = null,
+        RestPeriod? rest = null,
+        WarmupRamp? warmup = null,
+        string? notes = "baseline") =>
+        PrescriptionSnapshot.Create(
+            exerciseId ?? BaseExerciseId,
+            alternativeExerciseId,
+            workingSetCount,
+            targetReps ?? BaseReps,
+            rest ?? BaseRest,
+            warmup ?? BaseWarmup,
+            notes).Value;
+
     [Fact]
     public void Starting_from_a_program_day_records_the_origin_and_snapshots()
     {
@@ -50,6 +77,54 @@ public class WorkoutSessionTests
         session.Origin.ProgramDayId.ShouldBe(dayId);
         session.Origin.IsAdHoc.ShouldBeFalse();
         session.Exercises.ShouldHaveSingleItem().Prescription.ShouldBe(snapshot);
+    }
+
+    [Fact]
+    public void Independently_constructed_snapshots_with_identical_fields_are_equal()
+    {
+        BuildSnapshot().ShouldBe(BuildSnapshot());
+    }
+
+    [Fact]
+    public void Snapshots_differing_only_in_exercise_id_are_not_equal()
+    {
+        BuildSnapshot(exerciseId: BaseExerciseId).ShouldNotBe(BuildSnapshot(exerciseId: OtherExerciseId));
+    }
+
+    [Fact]
+    public void Snapshots_differing_only_in_alternative_exercise_id_are_not_equal()
+    {
+        BuildSnapshot(alternativeExerciseId: null).ShouldNotBe(BuildSnapshot(alternativeExerciseId: OtherExerciseId));
+    }
+
+    [Fact]
+    public void Snapshots_differing_only_in_working_set_count_are_not_equal()
+    {
+        BuildSnapshot(workingSetCount: 3).ShouldNotBe(BuildSnapshot(workingSetCount: 4));
+    }
+
+    [Fact]
+    public void Snapshots_differing_only_in_target_reps_are_not_equal()
+    {
+        BuildSnapshot(targetReps: BaseReps).ShouldNotBe(BuildSnapshot(targetReps: OtherReps));
+    }
+
+    [Fact]
+    public void Snapshots_differing_only_in_rest_are_not_equal()
+    {
+        BuildSnapshot(rest: BaseRest).ShouldNotBe(BuildSnapshot(rest: OtherRest));
+    }
+
+    [Fact]
+    public void Snapshots_differing_only_in_warmup_are_not_equal()
+    {
+        BuildSnapshot(warmup: BaseWarmup).ShouldNotBe(BuildSnapshot(warmup: OtherWarmup));
+    }
+
+    [Fact]
+    public void Snapshots_differing_only_in_notes_are_not_equal()
+    {
+        BuildSnapshot(notes: "baseline").ShouldNotBe(BuildSnapshot(notes: "different"));
     }
 
     [Fact]
@@ -140,6 +215,24 @@ public class WorkoutSessionTests
         retry.IsSuccess.ShouldBeTrue();
         retry.Value.Id.ShouldBe(first.Id);
         session.Exercises[0].Sets.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void The_same_client_set_id_can_be_used_on_two_different_exercises()
+    {
+        var session = ProgramSession(Snapshot(), Snapshot());
+        var first = session.Exercises[0];
+        var second = session.Exercises[1];
+        var clientSetId = Guid.NewGuid();
+
+        var setOnFirst = session.LogSet(
+            first.Id, clientSetId, SetKind.Working, Weight.Kg(27.5m), 8, null, Start).Value;
+        var setOnSecond = session.LogSet(
+            second.Id, clientSetId, SetKind.Working, Weight.Kg(30m), 6, null, Start).Value;
+
+        setOnFirst.Id.ShouldNotBe(setOnSecond.Id);
+        session.Exercises[0].Sets.ShouldHaveSingleItem();
+        session.Exercises[1].Sets.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -253,6 +346,25 @@ public class WorkoutSessionTests
     }
 
     [Fact]
+    public void WorkingSetCount_sums_working_sets_across_every_exercise()
+    {
+        var session = ProgramSession(Snapshot(), Snapshot(), Snapshot());
+        var exercises = session.Exercises;
+
+        session.LogSet(exercises[0].Id, Guid.NewGuid(), SetKind.Warmup, Weight.Kg(20m), 10, null, Start);
+        session.LogSet(exercises[0].Id, Guid.NewGuid(), SetKind.Working, Weight.Kg(27.5m), 8, null, Start);
+        session.LogSet(exercises[0].Id, Guid.NewGuid(), SetKind.Working, Weight.Kg(27.5m), 7, null, Start);
+        session.LogSet(exercises[1].Id, Guid.NewGuid(), SetKind.Working, Weight.Kg(50m), 5, null, Start);
+        session.LogSet(exercises[2].Id, Guid.NewGuid(), SetKind.Warmup, Weight.Kg(15m), 10, null, Start);
+
+        session.WorkingSetCount.ShouldBe(3);
+
+        session.Complete(Start.AddHours(1)).IsSuccess.ShouldBeTrue();
+
+        session.DomainEvents.OfType<WorkoutSessionCompleted>().ShouldHaveSingleItem().WorkingSetCount.ShouldBe(3);
+    }
+
+    [Fact]
     public void A_completed_session_rejects_every_further_mutation()
     {
         var session = CompletedSession();
@@ -267,6 +379,21 @@ public class WorkoutSessionTests
         session.AddExercise(Snapshot()).Error.Code.ShouldBe(TrainingErrors.SessionClosed);
         session.Complete(Start.AddHours(2)).Error.Code.ShouldBe(TrainingErrors.SessionClosed);
         session.Abandon(Start.AddHours(2)).Error.Code.ShouldBe(TrainingErrors.SessionClosed);
+    }
+
+    [Fact]
+    public void Retrying_a_previously_logged_set_against_a_closed_session_is_rejected()
+    {
+        var session = ProgramSession();
+        var exercise = session.Exercises[0];
+        var clientSetId = Guid.NewGuid();
+        session.LogSet(exercise.Id, clientSetId, SetKind.Working, Weight.Kg(27.5m), 8, null, Start);
+        session.Complete(Start.AddHours(1));
+
+        var retry = session.LogSet(
+            exercise.Id, clientSetId, SetKind.Working, Weight.Kg(27.5m), 8, null, Start.AddMinutes(90));
+
+        retry.Error.Code.ShouldBe(TrainingErrors.SessionClosed);
     }
 
     [Fact]
