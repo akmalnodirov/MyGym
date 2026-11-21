@@ -104,6 +104,21 @@ public class AppUserTests
     }
 
     [Fact]
+    public void A_profile_with_all_optional_fields_null_is_accepted()
+    {
+        Profile(birthYear: null, days: null, minutes: null).IsSuccess.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(null, 3, 90)]
+    [InlineData(1996, null, 90)]
+    [InlineData(1996, 3, null)]
+    public void A_profile_with_exactly_one_optional_field_null_is_accepted(int? birthYear, int? days, int? minutes)
+    {
+        Profile(birthYear: birthYear, days: days, minutes: minutes).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
     public void Touching_last_seen_moves_it_forward_only()
     {
         var user = AppUser.Register(42L, "A", null, null, Now).Value;
