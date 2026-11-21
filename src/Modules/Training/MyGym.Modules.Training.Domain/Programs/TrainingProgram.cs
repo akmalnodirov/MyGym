@@ -75,7 +75,7 @@ public sealed class TrainingProgram : AggregateRoot<ProgramId>
 
         if (string.IsNullOrWhiteSpace(label))
             return Result<ProgramDay>.Failure(
-                new Error(TrainingErrors.ProgramNameRequired, "A day needs a label."));
+                new Error(TrainingErrors.ProgramDayLabelRequired, "A day needs a label."));
 
         var day = ProgramDay.Create(Id, _days.Count + 1, label, dayOfWeek);
         _days.Add(day);

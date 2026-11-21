@@ -15,6 +15,7 @@ public static class TrainingErrors
     // Programs
     public const string ProgramNotFound = "program.not_found";
     public const string ProgramNameRequired = "program.name_required";
+    public const string ProgramDayLabelRequired = "program.day_label_required";
     public const string ProgramNotEditable = "program.not_editable";
     public const string ProgramNeedsDay = "program.needs_at_least_one_day";
     public const string ProgramDayNeedsPrescription = "program.day_needs_at_least_one_prescription";

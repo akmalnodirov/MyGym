@@ -161,6 +161,85 @@ public class TrainingProgramTests
         program.RevisionNumber.ShouldBe(4);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void A_blank_day_label_is_rejected_and_does_not_bump_the_revision(string label)
+    {
+        var program = NewProgram();
+        var before = program.RevisionNumber;
+
+        var result = program.AddDay(label, null);
+
+        result.Error.Code.ShouldBe(TrainingErrors.ProgramDayLabelRequired);
+        program.RevisionNumber.ShouldBe(before);
+    }
+
+    [Fact]
+    public void Renaming_with_a_blank_name_does_not_bump_the_revision()
+    {
+        var program = NewProgram();
+        var before = program.RevisionNumber;
+
+        var result = program.Rename("   ");
+
+        result.Error.Code.ShouldBe(TrainingErrors.ProgramNameRequired);
+        program.RevisionNumber.ShouldBe(before);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(11)]
+    public void Adding_a_prescription_with_an_out_of_range_working_set_count_does_not_bump_the_revision(int count)
+    {
+        var program = NewProgram();
+        var day = program.AddDay("Upper", null).Value;
+        var before = program.RevisionNumber;
+
+        var result = program.AddPrescription(
+            day.Id, ExerciseId.New(), null, count,
+            RepRange.Create(6, 8).Value,
+            RestPeriod.Create(TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(3)).Value,
+            WarmupRamp.Empty, null);
+
+        result.Error.Code.ShouldBe(TrainingErrors.PrescriptionWorkingSetsOutOfBounds);
+        program.RevisionNumber.ShouldBe(before);
+    }
+
+    [Fact]
+    public void Adding_a_prescription_with_an_alternative_identical_to_the_primary_does_not_bump_the_revision()
+    {
+        var program = NewProgram();
+        var day = program.AddDay("Legs", null).Value;
+        var before = program.RevisionNumber;
+        var legPress = ExerciseId.New();
+
+        var result = program.AddPrescription(
+            day.Id, legPress, legPress, 3,
+            RepRange.Create(10, 12).Value,
+            RestPeriod.Create(TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(3)).Value,
+            WarmupRamp.Empty, null);
+
+        result.Error.Code.ShouldBe(TrainingErrors.PrescriptionAlternativeSameAsPrimary);
+        program.RevisionNumber.ShouldBe(before);
+    }
+
+    [Fact]
+    public void Adding_a_prescription_to_an_unknown_day_does_not_bump_the_revision()
+    {
+        var program = NewProgram();
+        var before = program.RevisionNumber;
+
+        var result = program.AddPrescription(
+            ProgramDayId.New(), ExerciseId.New(), null, 3,
+            RepRange.Create(6, 8).Value,
+            RestPeriod.Create(TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(3)).Value,
+            WarmupRamp.Empty, null);
+
+        result.Error.Code.ShouldBe(TrainingErrors.ProgramDayNotFound);
+        program.RevisionNumber.ShouldBe(before);
+    }
+
     [Fact]
     public void A_program_without_days_cannot_be_activated()
     {
@@ -250,6 +329,24 @@ public class TrainingProgramTests
         fork.Days[0].Id.ShouldNotBe(source.Days[0].Id);
         fork.Days[0].Prescriptions[0].Id.ShouldNotBe(source.Days[0].Prescriptions[0].Id);
         fork.Days[0].ProgramId.ShouldBe(fork.Id);
+    }
+
+    [Fact]
+    public void Forking_raises_no_events_and_leaves_the_sources_events_untouched()
+    {
+        // Deliberately not using ActiveProgram() here: it clears domain events before returning,
+        // which would leave the source-side assertion below unable to fail on a regression.
+        var program = NewProgram();
+        var day = program.AddDay("Upper", null).Value;
+        AddBench(program, day.Id);
+        program.Activate();
+        var eventsBeforeFork = program.DomainEvents.ToList();
+        eventsBeforeFork.ShouldNotBeEmpty();
+
+        var fork = program.Fork(UserId.New());
+
+        fork.DomainEvents.ShouldBeEmpty();
+        program.DomainEvents.ShouldBe(eventsBeforeFork);
     }
 
     private static TrainingProgram ActiveProgram()
