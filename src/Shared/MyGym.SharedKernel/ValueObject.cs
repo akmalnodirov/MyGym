@@ -18,4 +18,13 @@ public abstract class ValueObject : IEquatable<ValueObject>
             hash.Add(component);
         return hash.ToHashCode();
     }
+
+    public static bool operator ==(ValueObject? left, ValueObject? right)
+    {
+        if (left is null && right is null) return true;
+        if (left is null || right is null) return false;
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ValueObject? left, ValueObject? right) => !(left == right);
 }
