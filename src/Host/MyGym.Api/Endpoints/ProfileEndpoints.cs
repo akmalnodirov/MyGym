@@ -44,5 +44,9 @@ public static class ProfileEndpoints
 
             return result.ToHttpResult();
         });
+
+        group.MapDelete("", async (
+            ICurrentUser me, ICommandHandler<DeleteAccountCommand> handler, CancellationToken ct) =>
+            (await handler.HandleAsync(new DeleteAccountCommand(me.UserId), ct)).ToHttpResult());
     }
 }

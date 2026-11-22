@@ -1,4 +1,5 @@
 using System.Text;
+using MyGym.Api.Endpoints;
 using MyGym.Shared.Infrastructure.Auth;
 
 namespace MyGym.Api;
@@ -38,6 +39,17 @@ public static class AppSettingsOptions
                      && Encoding.UTF8.GetByteCount(o.SigningKey) >= 32,
                 "Jwt:SigningKey must be present and at least 32 bytes (UTF-8) long — HS256 token " +
                 "creation throws IDX10653 on the first request with anything shorter.")
+            .ValidateOnStart();
+
+        // A missing or non-HTTPS Mini App URL would not fail loudly: the webhook still answers
+        // Telegram's /start with 200 and a button, but WebAppInfo.Url silently fails to open the
+        // Mini App (Telegram requires HTTPS for Mini Apps), which is a confused user with no error
+        // anywhere in our logs. Caught here instead, at boot.
+        services.AddOptions<MiniAppOptions>()
+            .Bind(configuration.GetSection(MiniAppOptions.SectionName))
+            .Validate(
+                o => Uri.TryCreate(o.Url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps,
+                "MiniApp:Url is required and must be an absolute HTTPS URL.")
             .ValidateOnStart();
 
         return services;

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MyGym.Api;
 using MyGym.Api.Auth;
@@ -18,6 +19,7 @@ using MyGym.Shared.Infrastructure.Persistence;
 using MyGym.SharedKernel;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Telegram.Bot;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +54,7 @@ builder.Services.AddScoped<ICommandHandler<RefreshTokensCommand, AuthTokensRespo
     RefreshTokensCommandHandler>();
 builder.Services.AddScoped<IQueryHandler<GetProfileQuery, ProfileResponse>, GetProfileQueryHandler>();
 builder.Services.AddScoped<ICommandHandler<UpdateProfileCommand, ProfileResponse>, UpdateProfileCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<DeleteAccountCommand>, DeleteAccountCommandHandler>();
 
 // Task 12: program authoring and the day preview.
 builder.Services.AddScoped<ICommandHandler<CreateProgramCommand, ProgramResponse>, CreateProgramCommandHandler>();
@@ -76,6 +79,11 @@ builder.Services.AddScoped<ICommandHandler<CompleteSessionCommand>, CompleteSess
 builder.Services.AddScoped<ICommandHandler<AbandonSessionCommand>, AbandonSessionCommandHandler>();
 builder.Services.AddScoped<IQueryHandler<GetSessionQuery, SessionResponse>, GetSessionQueryHandler>();
 builder.Services.AddScoped<IQueryHandler<GetCurrentSessionQuery, SessionResponse?>, GetCurrentSessionQueryHandler>();
+
+// Task 14: account deletion and the Telegram bot webhook.
+builder.Services.Configure<MiniAppOptions>(builder.Configuration.GetSection(MiniAppOptions.SectionName));
+builder.Services.AddSingleton<ITelegramBotClient>(sp =>
+    new TelegramBotClient(sp.GetRequiredService<IOptions<TelegramAuthOptions>>().Value.BotToken));
 
 // Parsed once, here, as a strongly-typed JwtOptions — not via raw IConfiguration indexers — so a
 // missing key fails loudly with a message naming the configuration section instead of an NRE from
@@ -173,6 +181,9 @@ app.MapExerciseEndpoints();
 
 // Session endpoints and the critical path (Task 13).
 app.MapSessionEndpoints();
+
+// Telegram bot webhook (Task 14).
+app.MapTelegramWebhook();
 
 app.Run();
 

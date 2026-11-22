@@ -5,8 +5,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Telegram.Bot;
 
 namespace MyGym.IntegrationTests;
 
@@ -24,6 +26,12 @@ public sealed class ApiFixture(PostgresFixture postgres) : WebApplicationFactory
         builder.UseSetting("Jwt:Audience", "mygym-tests");
         builder.UseSetting("Jwt:SigningKey", "test-signing-key-at-least-32-bytes-long!!");
         builder.UseSetting("RunMigrationsOnStartup", "false");
+
+        // Program.cs registers ITelegramBotClient with the (fake, but real-shaped) bot token
+        // above. Replaced here with a no-op fake so WebhookTests' "/start" case never attempts a
+        // genuine outbound call to api.telegram.org — see FakeTelegramBotClient's own comment.
+        builder.ConfigureTestServices(services =>
+            services.AddSingleton<ITelegramBotClient>(new FakeTelegramBotClient()));
     }
 
     public async Task<HttpClient> CreateAuthenticatedClientAsync(long telegramUserId, string firstName = "Akmal")
