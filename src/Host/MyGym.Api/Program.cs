@@ -51,7 +51,15 @@ builder.Services.AddScoped<ICommandHandler<RefreshTokensCommand, AuthTokensRespo
 builder.Services.AddScoped<IQueryHandler<GetProfileQuery, ProfileResponse>, GetProfileQueryHandler>();
 builder.Services.AddScoped<ICommandHandler<UpdateProfileCommand, ProfileResponse>, UpdateProfileCommandHandler>();
 
-var jwt = builder.Configuration.GetSection(JwtOptions.SectionName);
+// Parsed once, here, as a strongly-typed JwtOptions — not via raw IConfiguration indexers — so a
+// missing key fails loudly with a message naming the configuration section instead of an NRE from
+// a null-forgiving `!`. This runs at registration time, before AddValidatedAppSettings' eager
+// ValidateOnStart gets a chance to run, so it is this parse (not that validation) that is the
+// actual backstop for a missing Jwt section at this point in startup.
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+    ?? throw new InvalidOperationException(
+        $"Configuration section '{JwtOptions.SectionName}' is required to configure JWT bearer authentication.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -61,13 +69,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // always return null for an authenticated request and silently fall back to per-IP
         // limiting — wrong, and invisible without reading the token on the wire. Disabling the
         // mapping keeps "sub" as "sub", which both the rate limiter and ICurrentUser (which also
-        // falls back to checking "sub") agree on.
+        // falls back to checking "sub") agree on. This only matters at all because
+        // UseRateLimiter() below runs after UseAuthentication()/UseAuthorization() in the request
+        // pipeline — reversed, context.User would still be the unauthenticated default principal
+        // when the partition callback runs, and no claim-mapping choice could fix that.
         options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidIssuer = jwt["Issuer"],
-            ValidAudience = jwt["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["SigningKey"]!)),
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateIssuerSigningKey = true,
@@ -115,9 +126,14 @@ if (app.Configuration.GetValue("RunMigrationsOnStartup", defaultValue: true))
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
-app.UseRateLimiter();
+
+// Authentication/authorization must run before the rate limiter: the limiter's partition callback
+// reads context.User.FindFirst("sub") (see the MapInboundClaims comment above), and that claim
+// only exists once UseAuthentication() has populated the principal. Reversed, every authenticated
+// request would see the unauthenticated default principal and silently fall back to per-IP limiting.
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
