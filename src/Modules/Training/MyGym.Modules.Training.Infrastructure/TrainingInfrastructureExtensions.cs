@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MyGym.Modules.Training.Application;
 using MyGym.Modules.Training.Application.Programs;
+using MyGym.Modules.Training.Application.Sessions;
 using MyGym.Modules.Training.Domain;
 using MyGym.Modules.Training.Domain.Programs;
 using MyGym.Modules.Training.Domain.Sessions;
@@ -26,6 +27,8 @@ public static class TrainingInfrastructureExtensions
         services.AddScoped<ILastWorkingWeightQuery, LastWorkingWeightQuery>();
         services.AddScoped<IQueryHandler<ListProgramsQuery, IReadOnlyList<ProgramSummaryResponse>>,
             ListProgramsQueryHandler>();
+        services.AddScoped<IQueryHandler<ListSessionsQuery, IReadOnlyList<SessionSummaryResponse>>,
+            ListSessionsQueryHandler>();
 
         return services;
     }

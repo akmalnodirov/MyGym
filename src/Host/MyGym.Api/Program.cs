@@ -11,6 +11,7 @@ using MyGym.Modules.ExerciseCatalog.Infrastructure;
 using MyGym.Modules.Identity.Application;
 using MyGym.Modules.Identity.Infrastructure;
 using MyGym.Modules.Training.Application.Programs;
+using MyGym.Modules.Training.Application.Sessions;
 using MyGym.Modules.Training.Infrastructure;
 using MyGym.Shared.Infrastructure.Auth;
 using MyGym.Shared.Infrastructure.Persistence;
@@ -61,6 +62,20 @@ builder.Services.AddScoped<ICommandHandler<SetProgramVisibilityCommand>, SetProg
 builder.Services.AddScoped<ICommandHandler<ForkProgramCommand, ProgramResponse>, ForkProgramCommandHandler>();
 builder.Services.AddScoped<IQueryHandler<GetProgramQuery, ProgramResponse>, GetProgramQueryHandler>();
 builder.Services.AddScoped<IQueryHandler<PreviewProgramDayQuery, DayPreviewResponse>, PreviewProgramDayQueryHandler>();
+
+// Task 13: session endpoints and the critical path. ListSessionsQuery is registered from
+// TrainingInfrastructureExtensions.AddTrainingInfrastructure because its handler is internal to
+// MyGym.Modules.Training.Infrastructure.
+builder.Services.AddScoped<ICommandHandler<StartSessionCommand, SessionResponse>, StartSessionCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<LogSetCommand, LoggedSetResponse>, LogSetCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<AddAdHocExerciseCommand, AddedExerciseResponse>,
+    AddAdHocExerciseCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<EditSetCommand>, EditSetCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<DeleteSetCommand>, DeleteSetCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<CompleteSessionCommand>, CompleteSessionCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<AbandonSessionCommand>, AbandonSessionCommandHandler>();
+builder.Services.AddScoped<IQueryHandler<GetSessionQuery, SessionResponse>, GetSessionQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<GetCurrentSessionQuery, SessionResponse?>, GetCurrentSessionQueryHandler>();
 
 // Parsed once, here, as a strongly-typed JwtOptions — not via raw IConfiguration indexers — so a
 // missing key fails loudly with a message naming the configuration section instead of an NRE from
@@ -155,6 +170,9 @@ app.MapProfileEndpoints();
 // Program authoring and the day preview; exercise search (Task 12).
 app.MapProgramEndpoints();
 app.MapExerciseEndpoints();
+
+// Session endpoints and the critical path (Task 13).
+app.MapSessionEndpoints();
 
 app.Run();
 

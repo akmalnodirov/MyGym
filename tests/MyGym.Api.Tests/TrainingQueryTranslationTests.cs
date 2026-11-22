@@ -143,4 +143,36 @@ public class TrainingQueryTranslationTests
         exercisesSql.ShouldContain("max(");
         exercisesSql.ShouldContain("logged_sets");
     }
+
+    [Fact]
+    public void Session_history_working_set_count_translates_via_SessionExercise_and_LoggedSet_entity_sets()
+    {
+        // Same shape as ListSessionsQueryHandler (Task 13): the brief's original version —
+        // s.Exercises.SelectMany(e => e.Sets).Count(set => set.Kind == SetKind.Working) — reaches
+        // WorkoutSession.Exercises and SessionExercise.Sets, the exact pair of Ignore'd computed
+        // accessors this class already proves (above) silently falls back to a full client-side
+        // fetch-and-count instead of throwing. The fix never touches either accessor: it reaches
+        // SessionExercise and LoggedSet directly via context.Set<T>(), with the working-set count
+        // expressed as a correlated Count(...) subquery per session-exercise row.
+        using var context = CreateContext();
+        var sessionIds = new List<SessionId> { SessionId.New() };
+
+        var query = context.Set<SessionExercise>()
+            .AsNoTracking()
+            .Where(e => sessionIds.Contains(e.SessionId))
+            .Select(e => new
+            {
+                e.SessionId,
+                WorkingCount = context.Set<LoggedSet>()
+                    .Count(set => set.SessionExerciseId == e.Id && set.Kind == SetKind.Working)
+            });
+
+        var sql = query.ToQueryString();
+
+        // A genuine correlated "SELECT count(*) ... FROM training.logged_sets ... WHERE
+        // session_exercise_id = s.id" scalar subquery per row, not a fetch of every session's
+        // exercises and sets followed by in-memory counting.
+        sql.ShouldContain("count(*)");
+        sql.ShouldContain("logged_sets");
+    }
 }
