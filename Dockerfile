@@ -8,7 +8,9 @@ WORKDIR /src
 # missing central version catalogue. global.json in this repo carries no "sdk" version pin today
 # (only a test-runner setting), so its absence would not currently break SDK selection for this
 # publish-only stage — but it is copied anyway so the build stays correct if a pin is ever added.
-COPY global.json Directory.Build.props Directory.Packages.props MyGym.sln ./
+# MyGym.sln itself is deliberately not copied (minor fix-before-merge item 6): restore and publish
+# below target the .csproj directly, and neither ever references the solution file.
+COPY global.json Directory.Build.props Directory.Packages.props ./
 COPY src/ src/
 RUN dotnet restore src/Host/MyGym.Api/MyGym.Api.csproj
 RUN dotnet publish src/Host/MyGym.Api/MyGym.Api.csproj -c Release -o /app --no-restore

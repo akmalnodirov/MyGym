@@ -54,8 +54,12 @@ public sealed partial class Exercise : AggregateRoot<ExerciseId>
     public UserId? OwnerUserId { get; private set; }
     public bool IsCustom => OwnerUserId is not null;
 
-    public IReadOnlyList<ExerciseName> Names => _names;
-    public IReadOnlyList<string> Aliases => _aliases;
+    // Minor 1: .AsReadOnly() wraps the backing list instead of returning it directly. Worse here
+    // than WarmupRamp.Steps was: Exercise is a live, loaded aggregate (not a disposable value
+    // object), so returning _names/_aliases as-is let a caller cast the "IReadOnlyList" straight
+    // back to List<T> and mutate the catalog's actual in-memory state.
+    public IReadOnlyList<ExerciseName> Names => _names.AsReadOnly();
+    public IReadOnlyList<string> Aliases => _aliases.AsReadOnly();
 
     public static Result<Exercise> Create(
         string slug,
@@ -85,7 +89,17 @@ public sealed partial class Exercise : AggregateRoot<ExerciseId>
 
         return _names.FirstOrDefault(n => n.LanguageCode == code)?.Value
             ?? _names.FirstOrDefault(n => n.LanguageCode == FallbackLanguage)?.Value
-            ?? _names[0].Value;
+            // Minor 8: Create()/CreateInternal() reject an empty name list, but EF's materialiser
+            // populates _names via backing-field access and bypasses that check, so a corrupted row
+            // could still reach here with zero names. _names[0] would throw an unhelpful
+            // ArgumentOutOfRangeException; this is the same "should be unreachable" state I13's
+            // DomainException exists for.
+            ?? (_names.Count > 0
+                ? _names[0].Value
+                : throw new DomainException(
+                    $"Exercise {Id.Value} has no names at all; NameFor('{languageCode}') has " +
+                    "nothing to fall back to. This should be unreachable since Create() requires " +
+                    "at least one name."));
     }
 
     private static Result<Exercise> CreateInternal(

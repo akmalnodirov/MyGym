@@ -31,3 +31,10 @@ jobs:
         with:
           name: test-results
           path: '**/results.trx'
+
+      # Minor fix-before-merge item 9: the Dockerfile has never actually been executed anywhere —
+      # not in CI, and not locally, since Docker cannot start on the implementer's machine (WSL
+      # reboot pending). This is the one unexecuted artefact a reboot on that machine will not
+      # validate either, so it has to be proven here instead.
+      - name: Build Docker image
+        run: docker build -t mygym-api:ci .

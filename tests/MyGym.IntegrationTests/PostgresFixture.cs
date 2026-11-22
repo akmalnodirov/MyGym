@@ -56,11 +56,29 @@ public sealed class PostgresFixture : IAsyncLifetime
         return new CatalogDbContext(options, dispatcher: null);
     }
 
+    /// <summary>
+    /// Minor fix-before-merge item 3: used to truncate only training.*, while all test classes in
+    /// <see cref="PostgresCollection"/> share this one container. That was safe only as long as
+    /// execution stayed sequential and nothing else ever truncated identity.* or catalog.* — a
+    /// latent cross-suite coupling that would produce confusing first-run failures rather than a
+    /// clear one. Extended to all three schemas now, before the first real run, rather than
+    /// debugging it later: every call site that needs catalog data already re-seeds it in its own
+    /// InitializeAsync (CatalogSeeder.SeedAsync is idempotent on slug), and no test depends on a
+    /// user row surviving from a previous test (every test creates its own via a fresh random
+    /// Telegram id), so truncating all three schemas here is safe.
+    /// </summary>
     public async Task ResetAsync()
     {
-        await using var context = CreateTrainingContext();
-        await context.Database.ExecuteSqlRawAsync(
+        await using var training = CreateTrainingContext();
+        await training.Database.ExecuteSqlRawAsync(
             "TRUNCATE training.sessions, training.programs CASCADE;");
+
+        await using var identity = CreateIdentityContext();
+        await identity.Database.ExecuteSqlRawAsync(
+            "TRUNCATE identity.refresh_tokens, identity.users CASCADE;");
+
+        await using var catalog = CreateCatalogContext();
+        await catalog.Database.ExecuteSqlRawAsync("TRUNCATE catalog.exercises CASCADE;");
     }
 
     public async ValueTask DisposeAsync() => await _container.DisposeAsync();

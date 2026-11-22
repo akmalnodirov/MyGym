@@ -52,7 +52,10 @@ public sealed class WarmupRamp : ValueObject
 
     private WarmupRamp(List<WarmupStep> steps) => _steps = steps;
 
-    public IReadOnlyList<WarmupStep> Steps => _steps;
+    // Minor 1: .AsReadOnly() wraps the backing list instead of returning it directly — returning
+    // _steps as-is lets a caller cast the "IReadOnlyList" straight back to List<WarmupStep> and
+    // mutate it, bypassing every invariant this type enforces in Create().
+    public IReadOnlyList<WarmupStep> Steps => _steps.AsReadOnly();
 
     public static WarmupRamp Empty { get; } = new([]);
 

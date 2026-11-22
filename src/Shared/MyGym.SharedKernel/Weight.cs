@@ -102,6 +102,13 @@ public sealed class Weight : ValueObject, IComparable<Weight>
                 $"Cannot round a weight in {Unit} to an increment in {increment.Unit}.");
 
         var steps = Math.Floor(Value / increment.Value);
+
+        // Minor 7: Math.Max(0m, ...) is unreachable, not a safety net — fixing the comment, not
+        // the code. Value is non-negative (Create rejects a negative value) and increment.Value is
+        // strictly positive (WeightIncrement.Create rejects <= 0), so steps = Floor(Value /
+        // increment.Value) is always >= 0, making steps * increment.Value always >= 0 too. Left in
+        // place because it costs nothing and documents the invariant it would catch if either
+        // factory's guard were ever removed.
         return new Weight(Math.Max(0m, steps * increment.Value), Unit);
     }
 

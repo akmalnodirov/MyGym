@@ -90,8 +90,11 @@ public static class SessionEndpoints
                 request.WorkingSetCount, request.RepMin, request.RepMax,
                 request.RestMinSeconds, request.RestMaxSeconds), ct);
 
-            return result.ToHttpResult(added => Results.Created(
-                $"/api/sessions/{id}/exercises/{added.SessionExerciseId}", added));
+            // Minor 4: there is no GET /api/sessions/{id}/exercises/{seId} route — the only way to
+            // read a session exercise back is as part of the whole session — so the Location
+            // header pointed at a route that 404s. Point it at the session itself, which is the
+            // nearest resource that actually resolves and already contains the new exercise.
+            return result.ToHttpResult(added => Results.Created($"/api/sessions/{id}", added));
         }).WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapPost("/{id:guid}/exercises/{exerciseId:guid}/sets", async (

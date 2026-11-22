@@ -34,4 +34,20 @@ public class RestPeriodTests
         RestPeriod.Create(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(31))
             .Error.Code.ShouldBe("rest_period.out_of_bounds");
     }
+
+    [Fact]
+    public void A_sub_second_minimum_is_rejected()
+    {
+        // Minor 2: RestPeriodConverter stores whole seconds; a sub-second component would
+        // otherwise round-trip through the database silently truncated.
+        RestPeriod.Create(TimeSpan.FromSeconds(90.5), TimeSpan.FromMinutes(2))
+            .Error.Code.ShouldBe("rest_period.out_of_bounds");
+    }
+
+    [Fact]
+    public void A_sub_second_maximum_is_rejected()
+    {
+        RestPeriod.Create(TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(90.5))
+            .Error.Code.ShouldBe("rest_period.out_of_bounds");
+    }
 }
