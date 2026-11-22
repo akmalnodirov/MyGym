@@ -149,12 +149,20 @@ Enforced by the aggregates themselves, not by API validation or database constra
 5. A program must have at least one day, and each day at least one prescription, to be activated.
 6. No set may be logged, edited, or deleted on a `Completed` or `Abandoned` session. Closed history
    is immutable.
-7. **At most one `InProgress` session per user.** This is also the guard that makes optimistic
-   client writes safe: without it, a retry storm on poor signal creates duplicate sessions. Backed
-   by a partial unique index on `(UserId)` where `Status = InProgress`.
-8. Completing a session requires at least one logged working set.
-9. `LoggedSet.Reps` is between 0 and 100; `Weight.Value` is non-negative and at most 1000 kg
+7. Completing a session requires at least one logged working set.
+8. `LoggedSet.Reps` is between 0 and 100; `Weight.Value` is non-negative and at most 1000 kg
    equivalent.
+
+### At most one `InProgress` session per user
+
+Unlike the invariants above, this one is **not** enforced by an aggregate, because it cannot be: a
+`WorkoutSession` aggregate has no way to see its siblings, so no in-aggregate check can guarantee
+there is only one `InProgress` row for a given user across the whole table. It is instead an
+application-level pre-check (`GetInProgressForUserAsync` before `Start`) backed by the real
+guarantee, a partial unique index on `(UserId)` where `Status = InProgress` — the same
+application-check-plus-database-index shape idempotent set logging below uses for the same reason.
+This is also the guard that makes optimistic client writes safe: without it, a retry storm on poor
+signal creates duplicate sessions. (See the Amendments note at the end of this document.)
 
 ### Idempotent set logging
 
@@ -171,9 +179,10 @@ A pure domain function, not a service with dependencies:
 WarmupRamp.Resolve(Weight working, WeightIncrement rounding) -> IReadOnlyList<ResolvedWarmupStep>
 ```
 
-Given 80 kg and a bench ramp of 27% x 10, 53% x 6, 80% x 3, it returns 22.5 x 10, 42.5 x 6,
-65 x 3, rounded to increments that physically exist. No database, no mocks, exhaustively
-unit-testable.
+Given 80 kg and a bench ramp of 27% x 10, 53% x 6, 80% x 3, it returns 20 x 10, 40 x 6, 62.5 x 3,
+rounded *down* to increments that physically exist — never rounded to nearest, which could ask the
+athlete to load more than the prescribed percentage. No database, no mocks, exhaustively
+unit-testable. (See the Amendments note at the end of this document.)
 
 ### Ad-hoc sessions
 
@@ -275,8 +284,12 @@ machine-readable code (`session.already_in_progress`, `warmup.percent_not_ascend
 English sentence, so the Mini App localizes from the code and the backend never holds UI copy in
 any language.
 
-HTTP mapping: 409 for state conflicts, 422 for validation failures, 404 for missing or
-non-owned resources, 429 for rate limits, 401/403 for authentication and ownership.
+HTTP mapping: 409 for state conflicts, 422 for validation failures, 404 for missing **or
+non-owned** resources, 429 for rate limits, 401 for authentication. A resource that exists but is
+not owned by the caller returns 404, not 403: a 403 confirms the id is real and merely forbidden,
+which lets an attacker enumerate every other athlete's program and session ids by watching for the
+403/404 split. 404 for both cases is indistinguishable from the outside. (See the Amendments note
+at the end of this document.)
 
 ## 10. Non-functional requirements
 
@@ -326,3 +339,25 @@ Deferred to later sub-projects, and deliberately absent here:
 - Friends, feed, reactions, leaderboards, sharing, moderation (#3)
 - AI program generation, nutrition guidance, session analysis (#4)
 - Local-first offline sync, media uploads, wearable integrations, payments (not planned)
+
+## Amendments
+
+Three corrections made after implementation and a final whole-branch review revealed the document,
+not the code, was wrong:
+
+1. **§5's warm-up example** originally gave 80 kg at 27/53/80% as 22.5 x 10, 42.5 x 6, 65 x 3
+   (round-to-nearest). The implementation rounds *down* and returns 20 x 10, 40 x 6, 62.5 x 3,
+   which is correct: §5's own prose says a warm-up "rounded to increments that physically exist"
+   must never ask the athlete to load more than the prescribed percentage, and rounding to nearest
+   can round up. Corrected to match the implementation.
+2. **§5's invariant list** originally included "at most one `InProgress` session per user" among
+   invariants "enforced in the domain... not by API validation or database constraints alone." A
+   `WorkoutSession` aggregate cannot see its sibling rows, so no in-aggregate check can enforce a
+   constraint across the whole table — this was always structurally unenforceable in the domain as
+   originally described. Moved out of that list into its own section describing the
+   application-check-plus-partial-unique-index shape the implementation actually uses, which is the
+   only correct way to enforce it.
+3. **§9's HTTP mapping** originally specified 403 for ownership failures. The implementation
+   deliberately returns 404 for a resource that exists but is not owned by the caller, specifically
+   to prevent id enumeration — a 403 confirms the id is real, which a 404 does not. Amended to
+   specify 404, with the anti-enumeration reasoning recorded alongside it.
