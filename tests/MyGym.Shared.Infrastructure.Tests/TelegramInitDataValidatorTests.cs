@@ -37,11 +37,26 @@ public class TelegramInitDataValidatorTests
                    (username is null ? "" : $",\"username\":\"{username}\"") +
                    (languageCode is null ? "" : $",\"language_code\":\"{languageCode}\"") + "}";
 
+        return SignAndEncode(user, (authDate ?? Now).ToUnixTimeSeconds().ToString(), overrideHash);
+    }
+
+    /// <summary>
+    /// Like <see cref="BuildInitData"/>, but lets a test supply an arbitrary raw <c>user</c> JSON
+    /// payload and/or raw <c>auth_date</c> string, correctly signed. This is how the odd-shaped
+    /// payloads below (non-object user, non-numeric id, out-of-range auth_date, ...) get past the
+    /// signature check — a real client that controls the bot token's secret can produce exactly
+    /// these shapes, so the validator must fail them cleanly rather than throw.
+    /// </summary>
+    private static string BuildInitDataWithRawUser(string userJson, string? authDateRaw = null) =>
+        SignAndEncode(userJson, authDateRaw ?? Now.ToUnixTimeSeconds().ToString(), overrideHash: null);
+
+    private static string SignAndEncode(string userJson, string authDateRaw, string? overrideHash)
+    {
         var fields = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
-            ["auth_date"] = ((authDate ?? Now).ToUnixTimeSeconds()).ToString(),
+            ["auth_date"] = authDateRaw,
             ["query_id"] = "AAEtest",
-            ["user"] = user
+            ["user"] = userJson
         };
 
         var dataCheckString = string.Join('\n', fields.Select(f => $"{f.Key}={f.Value}"));
@@ -133,6 +148,65 @@ public class TelegramInitDataValidatorTests
             BuildInitData(overrideHash: new string('z', 64)));
 
         result.Error.Code.ShouldBe(AuthErrors.InitDataSignatureInvalid);
+    }
+
+    // The payloads below are validly signed (BuildInitDataWithRawUser computes a correct
+    // signature over whatever raw user/auth_date is supplied), so they reach ParseUser and the
+    // post-signature auth_date conversion. None of these are forgeries - they model Telegram
+    // sending a shape the validator does not expect. No exception may escape Validate; every case
+    // must resolve to a clean auth.init_data_malformed failure instead of a 500.
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("42")]
+    [InlineData("true")]
+    public void A_signed_but_non_object_user_payload_is_rejected_cleanly(string userJson)
+    {
+        var result = CreateValidator().Validate(BuildInitDataWithRawUser(userJson));
+
+        result.Error.Code.ShouldBe(AuthErrors.InitDataMalformed);
+    }
+
+    [Fact]
+    public void A_signed_user_with_a_string_id_is_rejected_cleanly()
+    {
+        var result = CreateValidator().Validate(
+            BuildInitDataWithRawUser("{\"id\":\"123456789\",\"first_name\":\"Akmal\"}"));
+
+        result.Error.Code.ShouldBe(AuthErrors.InitDataMalformed);
+    }
+
+    [Theory]
+    [InlineData("{\"id\":123456789,\"first_name\":42}")]
+    [InlineData("{\"id\":123456789,\"first_name\":true}")]
+    public void A_signed_user_with_a_non_string_first_name_is_rejected_cleanly(string userJson)
+    {
+        var result = CreateValidator().Validate(BuildInitDataWithRawUser(userJson));
+
+        result.Error.Code.ShouldBe(AuthErrors.InitDataMalformed);
+    }
+
+    [Theory]
+    [InlineData("{\"id\":123456789,\"first_name\":\"Akmal\",\"username\":42}")]
+    [InlineData("{\"id\":123456789,\"first_name\":\"Akmal\",\"language_code\":42}")]
+    public void A_signed_user_with_a_non_string_optional_field_is_rejected_cleanly(string userJson)
+    {
+        var result = CreateValidator().Validate(BuildInitDataWithRawUser(userJson));
+
+        result.Error.Code.ShouldBe(AuthErrors.InitDataMalformed);
+    }
+
+    [Theory]
+    [InlineData(long.MaxValue)]
+    [InlineData(long.MinValue)]
+    public void A_signed_but_out_of_range_auth_date_is_rejected_cleanly(long authDateUnix)
+    {
+        const string validUser = "{\"id\":123456789,\"first_name\":\"Akmal\"}";
+        var result = CreateValidator().Validate(
+            BuildInitDataWithRawUser(validUser, authDateUnix.ToString()));
+
+        result.Error.Code.ShouldBe(AuthErrors.InitDataMalformed);
     }
 
     private sealed class FakeTimeProvider(DateTimeOffset now) : TimeProvider

@@ -29,6 +29,12 @@ public sealed class TelegramInitDataValidator(
 {
     private const string SecretKeySalt = "WebAppData";
 
+    // DateTimeOffset.FromUnixTimeSeconds throws ArgumentOutOfRangeException outside this range
+    // (roughly year 1 to year 9999). long.TryParse happily accepts long.MaxValue/MinValue, so
+    // nothing upstream of this filters it — it must be checked before converting.
+    private static readonly long MinAuthDateUnixSeconds = DateTimeOffset.MinValue.ToUnixTimeSeconds();
+    private static readonly long MaxAuthDateUnixSeconds = DateTimeOffset.MaxValue.ToUnixTimeSeconds();
+
     public Result<TelegramUserInfo> Validate(string initData)
     {
         if (string.IsNullOrWhiteSpace(initData))
@@ -57,6 +63,9 @@ public sealed class TelegramInitDataValidator(
         var dataCheckString = string.Join('\n', fields.Select(f => $"{f.Key}={f.Value}"));
         if (!SignatureMatches(dataCheckString, providedHash))
             return Fail(AuthErrors.InitDataSignatureInvalid, "Init data signature does not match.");
+
+        if (authDateUnix < MinAuthDateUnixSeconds || authDateUnix > MaxAuthDateUnixSeconds)
+            return Fail(AuthErrors.InitDataMalformed, "Init data auth_date is out of range.");
 
         var authDate = DateTimeOffset.FromUnixTimeSeconds(authDateUnix);
         var now = timeProvider.GetUtcNow();
@@ -98,27 +107,67 @@ public sealed class TelegramInitDataValidator(
             using var document = JsonDocument.Parse(userJson);
             var root = document.RootElement;
 
-            if (!root.TryGetProperty("id", out var idElement) || !idElement.TryGetInt64(out var id))
-                return Fail(AuthErrors.InitDataMalformed, "User payload has no id.");
+            // user is signed, so it is not attacker-controlled in the forgery sense — but it is
+            // still untrusted shape: valid JSON that is not an object (null, an array, a bare
+            // number or boolean) makes TryGetProperty throw InvalidOperationException rather than
+            // returning false. A protocol change on Telegram's side must fail cleanly, not crash
+            // every sign-in.
+            if (root.ValueKind != JsonValueKind.Object)
+                return Fail(AuthErrors.InitDataMalformed, "User payload is not a JSON object.");
 
-            var firstName = root.TryGetProperty("first_name", out var firstNameElement)
-                ? firstNameElement.GetString()
-                : null;
+            if (!root.TryGetProperty("id", out var idElement)
+                || idElement.ValueKind != JsonValueKind.Number
+                || !idElement.TryGetInt64(out var id))
+                return Fail(AuthErrors.InitDataMalformed, "User payload has no numeric id.");
 
-            if (string.IsNullOrWhiteSpace(firstName))
+            if (!TryGetStringProperty(root, "first_name", isOptional: false, out var firstName)
+                || string.IsNullOrWhiteSpace(firstName))
                 return Fail(AuthErrors.InitDataMalformed, "User payload has no first_name.");
 
+            if (!TryGetStringProperty(root, "username", isOptional: true, out var username))
+                return Fail(AuthErrors.InitDataMalformed, "User payload has a non-string username.");
+
+            if (!TryGetStringProperty(root, "language_code", isOptional: true, out var languageCode))
+                return Fail(AuthErrors.InitDataMalformed, "User payload has a non-string language_code.");
+
             return Result<TelegramUserInfo>.Success(new TelegramUserInfo(
-                id,
-                firstName,
-                root.TryGetProperty("username", out var u) ? u.GetString() : null,
-                root.TryGetProperty("language_code", out var l) ? l.GetString() : null,
-                authDate));
+                id, firstName!, username, languageCode, authDate));
         }
         catch (JsonException)
         {
             return Fail(AuthErrors.InitDataMalformed, "User payload is not valid JSON.");
         }
+    }
+
+    /// <summary>
+    /// Reads a string-typed property safely. A missing property resolves to <c>null</c> only when
+    /// <paramref name="isOptional"/> is true (and likewise for an explicit JSON null, since
+    /// <see cref="JsonElement.GetString"/> already treats null safely) — a required property that
+    /// is missing, null, or present with a non-string value (e.g. a number or boolean) fails.
+    /// </summary>
+    private static bool TryGetStringProperty(
+        JsonElement root, string propertyName, bool isOptional, out string? value)
+    {
+        if (!root.TryGetProperty(propertyName, out var element))
+        {
+            value = null;
+            return isOptional;
+        }
+
+        if (element.ValueKind == JsonValueKind.Null && isOptional)
+        {
+            value = null;
+            return true;
+        }
+
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            value = null;
+            return false;
+        }
+
+        value = element.GetString();
+        return true;
     }
 
     private static Result<TelegramUserInfo> Fail(string code, string message) =>
