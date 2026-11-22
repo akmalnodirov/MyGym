@@ -58,4 +58,19 @@ public abstract class ModuleDbContext(DbContextOptions options, IDomainEventDisp
         throw new NotSupportedException(
             $"{GetType().Name} does not support the synchronous SaveChanges path because it would " +
             $"bypass domain event dispatch. Use {nameof(SaveChangesAsync)} instead.");
+
+    /// <summary>
+    /// R18: the two-arg async overload is a separate member of the same virtual chain as the
+    /// one-arg SaveChangesAsync(CancellationToken) above — overriding one does not override the
+    /// other. Left unoverridden, a caller using this overload would land on DbContext's own base
+    /// implementation: no transaction, no domain-event dispatch, no error, just a write with every
+    /// event silently dropped. The protection before this was "no call site happens to reach it" —
+    /// a property of today's call sites, not of the type. Mirrors the SaveChanges(bool) override
+    /// above.
+    /// </summary>
+    public sealed override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(
+            $"{GetType().Name} does not support SaveChangesAsync(bool, CancellationToken) because " +
+            $"it would bypass domain event dispatch. Use {nameof(SaveChangesAsync)}(CancellationToken) instead.");
 }

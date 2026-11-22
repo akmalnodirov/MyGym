@@ -251,6 +251,32 @@ public class ProgramEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         fork.Days[0].Prescriptions.Count.ShouldBe(2);
     }
 
+    /// <summary>
+    /// C3 residual (re-review): of the nine Training write handlers with no deleted-user check,
+    /// Fork is the one that is actually reachable post-deletion rather than unreachable-by-404 —
+    /// the other eight all load-by-id-plus-owner first, and the purge deletes every program the
+    /// actor owned, so those loads already return null. Fork instead forks *someone else's*
+    /// program into a brand-new program owned by the deleted actor, which is exactly the
+    /// orphaned-row shape C3 exists to prevent.
+    /// </summary>
+    [Fact]
+    public async Task A_deleted_athletes_token_cannot_fork_a_public_program()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (owner, benchId, rowId) = await SetupAsync();
+        var program = await CreateAsync(owner, benchId, rowId);
+        await owner.PostAsync($"/api/programs/{program.Id}/activate", null, ct);
+        await owner.PatchAsJsonAsync(
+            $"/api/programs/{program.Id}/visibility", new { visibility = "Public" }, ct);
+
+        var forker = await _api.CreateAuthenticatedClientAsync(Random.Shared.NextInt64(1, long.MaxValue));
+        await forker.DeleteAsync("/api/me", ct);
+
+        var forked = await forker.PostAsync($"/api/programs/{program.Id}/fork", null, ct);
+
+        forked.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
     [Fact]
     public async Task A_day_preview_with_no_training_history_returns_a_stable_zero_valued_shape()
     {

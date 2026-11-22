@@ -186,11 +186,22 @@ public sealed class SetProgramVisibilityCommandHandler(
 public sealed record ForkProgramCommand(UserId Actor, ProgramId ProgramId);
 
 public sealed class ForkProgramCommandHandler(
-    ITrainingProgramRepository programs, ITrainingUnitOfWork unitOfWork)
+    ITrainingProgramRepository programs, IAthleteProfileQueries profiles, ITrainingUnitOfWork unitOfWork)
     : ICommandHandler<ForkProgramCommand, ProgramResponse>
 {
     public async Task<Result<ProgramResponse>> HandleAsync(ForkProgramCommand command, CancellationToken ct)
     {
+        // C3 residual (re-review): Fork is the one write path, of the nine with no deleted-user
+        // check, that is actually reachable after deletion rather than unreachable-by-404. The
+        // other eight all load-by-id-plus-owner first, and the purge deletes every program and
+        // session the actor owned, so those loads already return null post-deletion. Fork instead
+        // forks *someone else's* public Active program into a brand-new program owned by the
+        // (deleted) actor — exactly the orphaned-row shape C3 and the purge-first ordering exist
+        // to prevent. Same mechanism as the other six sites.
+        var exists = await LoadingPreferencesLookup.EnsureUserExistsAsync(profiles, command.Actor, ct);
+        if (exists.IsFailure)
+            return Result<ProgramResponse>.Failure(exists.Error);
+
         var source = await programs.GetByIdAsync(command.ProgramId, ct);
 
         // A program is forkable if the actor owns it, or it is public and active (I9).
