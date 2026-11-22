@@ -5,6 +5,7 @@ using MyGym.Modules.Training.Domain.Sessions;
 using MyGym.Modules.Training.Domain.ValueObjects;
 using MyGym.Shared.Infrastructure.Persistence;
 using MyGym.SharedKernel;
+using Npgsql;
 
 namespace MyGym.Modules.Training.Infrastructure;
 
@@ -15,6 +16,35 @@ public sealed class TrainingDbContext(DbContextOptions<TrainingDbContext> option
 
     public DbSet<TrainingProgram> Programs => Set<TrainingProgram>();
     public DbSet<WorkoutSession> Sessions => Set<WorkoutSession>();
+
+    /// <summary>
+    /// I2: translates the two concurrency failure modes a write here can hit into the Domain
+    /// exceptions in ConcurrencyExceptions.cs, so Application handlers can catch a specific type
+    /// and map it to the Result the corresponding guard describes, instead of either an unmapped
+    /// 500 (nothing previously caught DbUpdateException/DbUpdateConcurrencyException anywhere) or
+    /// requiring Application to reference EF Core/Npgsql directly. The constraint-name constants
+    /// referenced below are public specifically so this consumer could exist.
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await base.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ProgramEditConflictException();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" } pg)
+        {
+            throw pg.ConstraintName switch
+            {
+                WorkoutSessionConfiguration.InProgressIndexName => new SessionAlreadyInProgressConflictException(),
+                LoggedSetConfiguration.ClientSetIdIndexName => new DuplicateClientSetIdConflictException(),
+                _ => ex
+            };
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

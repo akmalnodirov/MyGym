@@ -22,6 +22,7 @@ public static class TrainingErrors
     public const string ProgramAlreadyActive = "program.already_active";
     public const string ProgramArchived = "program.archived";
     public const string ProgramDayNotFound = "program.day_not_found";
+    public const string ProgramEditConflict = "program.edit_conflict";
     public const string PrescriptionWorkingSetsOutOfBounds = "prescription.working_sets_out_of_bounds";
     public const string PrescriptionAlternativeSameAsPrimary = "prescription.alternative_same_as_primary";
 

@@ -151,7 +151,10 @@ public class SessionEndpointTests(PostgresFixture postgres) : IAsyncLifetime
 
         var completed = await client.PostAsync($"/api/sessions/{session.Id}/complete", null, ct);
 
-        completed.StatusCode.ShouldBe(HttpStatusCode.UnprocessableContent);
+        // I8: a bodiless POST with no payload to edit is a state conflict (409), not a 422
+        // field-validation failure — same class as program.already_active/program.archived on
+        // /activate.
+        completed.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         var problem = await completed.Content.ReadFromJsonAsync<ProblemPayload>(ct);
         problem!.ErrorCode.ShouldBe("session.needs_at_least_one_working_set");
     }

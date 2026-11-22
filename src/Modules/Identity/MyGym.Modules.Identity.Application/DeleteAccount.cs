@@ -10,8 +10,7 @@ public sealed class DeleteAccountCommandHandler(
     IAppUserRepository users,
     IRefreshTokenRepository refreshTokens,
     ITrainingDataPurger trainingData,
-    IIdentityUnitOfWork unitOfWork,
-    TimeProvider timeProvider) : ICommandHandler<DeleteAccountCommand>
+    IIdentityUnitOfWork unitOfWork) : ICommandHandler<DeleteAccountCommand>
 {
     public async Task<Result> HandleAsync(DeleteAccountCommand command, CancellationToken ct)
     {
@@ -35,7 +34,8 @@ public sealed class DeleteAccountCommandHandler(
         // database-level cascade (no FK crosses the identity/training schema boundary).
         await trainingData.PurgeForUserAsync(command.UserId, ct);
 
-        await refreshTokens.RevokeAllForUserAsync(command.UserId, timeProvider.GetUtcNow(), ct);
+        // I10: a real hard delete, not a revoke — see IRefreshTokenRepository.DeleteAllForUserAsync.
+        await refreshTokens.DeleteAllForUserAsync(command.UserId, ct);
         users.Remove(user);
         await unitOfWork.SaveChangesAsync(ct);
 

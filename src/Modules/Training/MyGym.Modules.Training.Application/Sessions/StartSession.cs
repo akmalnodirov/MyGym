@@ -46,8 +46,12 @@ public sealed class StartSessionCommandHandler(
                     TrainingErrors.ProgramDayNotFound, "A program day is required when starting from a program."));
 
             var program = await programs.GetByIdAsync(programId, ct);
+
+            // I9: visibility now also requires Active status for a non-owned program — previously
+            // this let an athlete start a session from someone else's Draft or Archived template,
+            // bypassing the activation gate entirely.
             var visible = program is not null
-                && (program.OwnerUserId == command.Actor || program.Visibility == ProgramVisibility.Public);
+                && ProgramVisibilityPolicy.IsVisibleTo(program, command.Actor, ProgramStatus.Active);
 
             if (!visible)
                 return Result<SessionResponse>.Failure(
@@ -90,7 +94,20 @@ public sealed class StartSessionCommandHandler(
         }
 
         await sessions.AddAsync(session, ct);
-        await unitOfWork.SaveChangesAsync(ct);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (SessionAlreadyInProgressConflictException)
+        {
+            // I2: the application-level check above (GetInProgressForUserAsync) is not safe under
+            // concurrency on its own — two requests can both pass it before either has inserted.
+            // The database's partial unique index is the real guarantee; this turns its violation
+            // into the same 409 the check above already returns for the sequential case.
+            return Result<SessionResponse>.Failure(new Error(
+                TrainingErrors.SessionAlreadyInProgress, "Finish or abandon the open session first."));
+        }
 
         var suggested = await lastWeights.GetTopWorkingWeightsAsync(
             command.Actor, snapshots.Select(s => s.ExerciseId).ToList(), ct);

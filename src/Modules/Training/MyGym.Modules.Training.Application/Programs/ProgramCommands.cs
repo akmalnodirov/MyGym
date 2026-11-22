@@ -55,6 +55,14 @@ public sealed class ReplaceProgramCommandHandler(
             return Result<ProgramResponse>.Failure(
                 new Error(TrainingErrors.ProgramNotEditable, "An archived program cannot be edited."));
 
+        // I9: invariant 5 ("a program must have at least one day... to be activated") was only
+        // checked in Activate(), so a PUT with an empty days array could degrade an already-Active
+        // program into a shape the domain declares invalid — a shape POST /api/sessions then fails
+        // against with program.day_not_found instead of this being rejected at the edit itself.
+        if (command.Days.Count == 0)
+            return Result<ProgramResponse>.Failure(
+                new Error(TrainingErrors.ProgramNeedsDay, "A program must have at least one day."));
+
         var rename = existing.Rename(command.Name);
         if (rename.IsFailure)
             return Result<ProgramResponse>.Failure(rename.Error);
@@ -87,7 +95,20 @@ public sealed class ReplaceProgramCommandHandler(
             }
         }
 
-        await unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (ProgramEditConflictException)
+        {
+            // I2: RevisionNumber is an optimistic concurrency token (TrainingProgramConfiguration)
+            // specifically so a concurrent edit throws here instead of silently overwriting another
+            // edit — but nothing previously caught the resulting DbUpdateConcurrencyException, so
+            // the configured guard's only outcome was an unmapped 500.
+            return Result<ProgramResponse>.Failure(new Error(
+                TrainingErrors.ProgramEditConflict, "This program was edited concurrently. Reload and try again."));
+        }
+
         return Result<ProgramResponse>.Success(ProgramResponse.From(existing));
     }
 }
@@ -165,9 +186,9 @@ public sealed class ForkProgramCommandHandler(
     {
         var source = await programs.GetByIdAsync(command.ProgramId, ct);
 
-        // A program is forkable if the actor owns it, or it is public.
+        // A program is forkable if the actor owns it, or it is public and active (I9).
         var visible = source is not null
-            && (source.OwnerUserId == command.Actor || source.Visibility == ProgramVisibility.Public);
+            && ProgramVisibilityPolicy.IsVisibleTo(source, command.Actor, ProgramStatus.Active);
 
         if (!visible)
             return Result<ProgramResponse>.Failure(

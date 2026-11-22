@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Xml.Linq;
 using Shouldly;
 
 namespace MyGym.ArchitectureTests;
@@ -52,9 +53,18 @@ public class ModuleBoundaryTests
     /// ProjectReference to MyGym.Modules.Identity.Infrastructure (or .Domain, or .Application) to
     /// take a shortcut instead of going through MyGym.Modules.Identity.Contracts. This inspects
     /// <see cref="Assembly.GetReferencedAssemblies"/> — the actual compiled dependency list, not
-    /// source text — so a violation introduced via a transitive-looking "helper" project, or via a
-    /// type used only in a generic constraint, is still caught: it has to show up as a referenced
-    /// assembly for the code to compile and run at all.
+    /// source text — so a violation where the forbidden type is actually *used* (even only in a
+    /// generic constraint) is still caught: it has to show up as a referenced assembly for the
+    /// code to compile and run at all.
+    ///
+    /// I1 correction: this does <em>not</em> catch a violation introduced via a "helper" project
+    /// that is referenced but never actually used — <c>MyGym.Shared.Infrastructure</c> carried a
+    /// ProjectReference to Training.Domain for exactly this reason (hosting three converters
+    /// nothing in its own source called), and Roslyn elides an unused reference from
+    /// <c>GetReferencedAssemblies()</c>, so that violation was invisible to this test the entire
+    /// time. An earlier version of this comment claimed otherwise; it was wrong. Catching that
+    /// shape requires reading the <c>.csproj</c> reference graph directly — see
+    /// <see cref="Shared_infrastructure_references_no_module_in_its_csproj_file"/>.
     /// </summary>
     [Theory]
     [MemberData(nameof(ModuleAssemblies))]
@@ -154,5 +164,73 @@ public class ModuleBoundaryTests
                 $"{assembly.GetName().Name} references more than one module's Infrastructure " +
                 $"({string.Join(", ", touched)}), which makes it a second composition root.");
         }
+    }
+
+    /// <summary>
+    /// I1: <c>MyGym.Shared.Infrastructure</c> is referenced by every module's Infrastructure and by
+    /// the host, so a dependency it takes on one module reaches all the others transitively. It
+    /// used to carry a ProjectReference to Training.Domain purely to host
+    /// <c>TrainingValueConverters.cs</c> (now moved into Training.Infrastructure, the only project
+    /// that used them) — invisible to <see cref="Shared_infrastructure_does_not_reference_any_module_assembly"/>
+    /// below because nothing in Shared.Infrastructure's own compiled IL actually used a Training.Domain
+    /// type, so Roslyn elided the reference from <see cref="Assembly.GetReferencedAssemblies"/>
+    /// even though the .csproj still declared it and every consumer still carried it transitively.
+    /// This reads the .csproj's own <c>&lt;ProjectReference&gt;</c> elements, which a metadata-only
+    /// check cannot see, closing the exact blind spot the violation exploited.
+    /// </summary>
+    [Fact]
+    public void Shared_infrastructure_references_no_module_in_its_csproj_file()
+    {
+        var csprojPath = FindRepositoryFile(Path.Combine(
+            "src", "Shared", "MyGym.Shared.Infrastructure", "MyGym.Shared.Infrastructure.csproj"));
+
+        var projectReferences = XDocument.Load(csprojPath)
+            .Descendants("ProjectReference")
+            .Select(e => (e.Attribute("Include")?.Value ?? string.Empty).Replace('\\', '/'))
+            .ToList();
+
+        var moduleReferences = projectReferences.Where(include => include.Contains("/Modules/")).ToList();
+
+        moduleReferences.ShouldBeEmpty(
+            "MyGym.Shared.Infrastructure.csproj declares a ProjectReference under Modules — every " +
+            $"other module's Infrastructure (and the host) would then carry it transitively, whether " +
+            $"or not Shared.Infrastructure's own source actually uses it: {string.Join(", ", moduleReferences)}");
+    }
+
+    /// <summary>
+    /// Metadata-based companion to the .csproj check above. Kept as a separate assertion — not
+    /// folded into <see cref="A_module_only_reaches_other_modules_through_their_contracts"/>'s
+    /// dataset — because that theory assumes every input belongs to exactly one of
+    /// <see cref="Modules"/> ("owned || Contracts" is the allowed shape); Shared.Infrastructure's
+    /// correct shape is stricter still — no module reference of any kind, not even a Contracts one.
+    /// </summary>
+    [Fact]
+    public void Shared_infrastructure_does_not_reference_any_module_assembly()
+    {
+        var assembly = typeof(MyGym.Shared.Infrastructure.Persistence.ModuleDbContext).Assembly;
+
+        var violations = assembly.GetReferencedAssemblies()
+            .Select(a => a.Name!)
+            .Where(name => name.StartsWith("MyGym.Modules.", StringComparison.Ordinal))
+            .ToList();
+
+        violations.ShouldBeEmpty(
+            $"MyGym.Shared.Infrastructure must not reference any module assembly, but references: " +
+            $"{string.Join(", ", violations)}");
+    }
+
+    private static string FindRepositoryFile(string relativePath)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "MyGym.sln")))
+            directory = directory.Parent;
+
+        if (directory is null)
+            throw new InvalidOperationException(
+                $"Could not locate the repository root (MyGym.sln) walking up from {AppContext.BaseDirectory}.");
+
+        var fullPath = Path.Combine(directory.FullName, relativePath);
+        File.Exists(fullPath).ShouldBeTrue($"Expected to find {fullPath}.");
+        return fullPath;
     }
 }

@@ -15,4 +15,11 @@ internal sealed class WorkoutSessionRepository(TrainingDbContext context) : IWor
 
     public async Task AddAsync(WorkoutSession session, CancellationToken ct) =>
         await context.Sessions.AddAsync(session, ct);
+
+    public Task<LoggedSet?> FindLoggedSetByClientSetIdAsync(
+        SessionExerciseId sessionExerciseId, Guid clientSetId, CancellationToken ct) =>
+        context.Set<LoggedSet>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                s => s.SessionExerciseId == sessionExerciseId && s.ClientSetId == clientSetId, ct);
 }

@@ -45,7 +45,26 @@ public sealed class LogSetCommandHandler(
         if (logged.IsFailure)
             return Result<LoggedSetResponse>.Failure(logged.Error);
 
-        await unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DuplicateClientSetIdConflictException)
+        {
+            // I2: WorkoutSession.LogSet's in-aggregate idempotency check (FindByClientSetId) is not
+            // safe under genuine concurrency — two concurrent retries of the same clientSetId can
+            // both find nothing and both try to insert. The database's unique index is the real
+            // guarantee; recover by reading what the other request just committed and returning it
+            // as the same success the sequential retry path already returns, rather than surfacing
+            // the race as an error and breaking the idempotency the retry badge depends on.
+            var existing = await sessions.FindLoggedSetByClientSetIdAsync(
+                command.SessionExerciseId, command.ClientSetId, ct);
+
+            return existing is null
+                ? Result<LoggedSetResponse>.Failure(new Error(TrainingErrors.SetNotFound, "Set not found."))
+                : Result<LoggedSetResponse>.Success(LoggedSetResponse.From(existing));
+        }
+
         return Result<LoggedSetResponse>.Success(LoggedSetResponse.From(logged.Value));
     }
 }

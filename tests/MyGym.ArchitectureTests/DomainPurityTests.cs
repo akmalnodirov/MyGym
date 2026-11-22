@@ -83,18 +83,41 @@ public class DomainPurityTests
     /// defeated by swapping to one of the other two mutable shapes. This is not vacuous:
     /// TrainingProgram.Days, WorkoutSession.Exercises, SessionExercise.Sets, and
     /// Exercise.PrimaryMuscles/SecondaryMuscles/Names/Aliases are all currently public
-    /// IReadOnlyList-typed properties on an AggregateRoot&lt;TId&gt; subtype, so the reflection scan
-    /// has real candidates to inspect on every run, not an empty set.
+    /// IReadOnlyList-typed properties on an Entity&lt;TId&gt; or AggregateRoot&lt;TId&gt; subtype,
+    /// so the reflection scan has real candidates to inspect on every run, not an empty set.
     /// </summary>
+    /// <remarks>
+    /// I14: widened from <c>AggregateRoot&lt;&gt;</c> to <c>Entity&lt;&gt;</c>. The rule's own doc
+    /// comment above names <c>SessionExercise.Sets</c>, but <c>SessionExercise</c>, <c>ProgramDay</c>,
+    /// <c>LoggedSet</c>, and <c>ExercisePrescription</c> all derive from <c>Entity&lt;TId&gt;</c>, not
+    /// <c>AggregateRoot&lt;TId&gt;</c> (only <c>TrainingProgram</c>, <c>WorkoutSession</c>, and
+    /// <c>Exercise</c> do) — so scoping to <c>AggregateRoot&lt;&gt;</c> alone left four of the
+    /// collection accessors the rule exists to protect unguarded. A <c>GetTypes().ShouldNotBeEmpty()</c>
+    /// guard is added below specifically because it could not be confirmed from NetArchTest's
+    /// source whether <c>Inherit</c> matches an <em>open</em> generic base like
+    /// <c>Entity&lt;&gt;</c> at all — without this guard, if it does not, the candidate list would
+    /// silently come back empty and the whole rule would pass vacuously on every run, exactly the
+    /// failure mode the rule's own history (see the class doc comment) already happened once before.
+    /// </remarks>
     [Theory]
     [MemberData(nameof(DomainAssemblies))]
     public void Aggregate_roots_do_not_expose_mutable_collections(Assembly domain)
     {
         var mutableCollectionTypes = new[] { typeof(List<>), typeof(IList<>), typeof(ICollection<>) };
 
-        var offenders = Types.InAssembly(domain)
+        var candidateTypes = Types.InAssembly(domain)
             .That().Inherit(typeof(MyGym.SharedKernel.AggregateRoot<>))
+            .Or().Inherit(typeof(MyGym.SharedKernel.Entity<>))
             .GetTypes()
+            .ToList();
+
+        candidateTypes.ShouldNotBeEmpty(
+            $"{domain.GetName().Name} has no Entity<> or AggregateRoot<> subtypes to inspect — " +
+            "either the assembly genuinely has none (unlikely for a Domain project), or " +
+            "NetArchTest's Inherit() is not matching an open generic base here, which would make " +
+            "this whole rule pass vacuously. Investigate before trusting a green run.");
+
+        var offenders = candidateTypes
             .SelectMany(type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             .Where(property => property.PropertyType.IsGenericType
                                && mutableCollectionTypes.Contains(property.PropertyType.GetGenericTypeDefinition()))

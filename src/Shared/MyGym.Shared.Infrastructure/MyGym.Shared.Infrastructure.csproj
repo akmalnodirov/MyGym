@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MyGym.SharedKernel\MyGym.SharedKernel.csproj" />
-    <ProjectReference Include="..\..\Modules\Training\MyGym.Modules.Training.Domain\MyGym.Modules.Training.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

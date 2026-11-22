@@ -13,13 +13,6 @@ internal sealed class RefreshTokenRepository(IdentityDbContext context) : IRefre
     public async Task AddAsync(RefreshToken token, CancellationToken ct) =>
         await context.RefreshTokens.AddAsync(token, ct);
 
-    public async Task RevokeAllForUserAsync(UserId userId, DateTimeOffset now, CancellationToken ct)
-    {
-        var tokens = await context.RefreshTokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null)
-            .ToListAsync(ct);
-
-        foreach (var token in tokens)
-            token.Revoke(now);
-    }
+    public Task<int> DeleteAllForUserAsync(UserId userId, CancellationToken ct) =>
+        context.RefreshTokens.Where(t => t.UserId == userId).ExecuteDeleteAsync(ct);
 }

@@ -18,6 +18,12 @@ public static class ProblemDetailsMapper
         AuthErrors.InitDataExpired => StatusCodes.Status401Unauthorized,
         AuthErrors.RefreshTokenInvalid => StatusCodes.Status401Unauthorized,
 
+        // I8: malformed-input, not a validation-of-an-otherwise-sound-payload failure — the
+        // Telegram initData itself could not be turned into a user at all, which is the same class
+        // as AuthErrors.InitDataMalformed above, not the 422 default these two fell into before.
+        IdentityErrors.TelegramIdInvalid => StatusCodes.Status400BadRequest,
+        IdentityErrors.FirstNameRequired => StatusCodes.Status400BadRequest,
+
         IdentityErrors.UserNotFound => StatusCodes.Status404NotFound,
         TrainingErrors.ProgramNotFound => StatusCodes.Status404NotFound,
         TrainingErrors.ProgramDayNotFound => StatusCodes.Status404NotFound,
@@ -30,6 +36,17 @@ public static class ProblemDetailsMapper
         TrainingErrors.ProgramAlreadyActive => StatusCodes.Status409Conflict,
         TrainingErrors.ProgramArchived => StatusCodes.Status409Conflict,
         TrainingErrors.ProgramNotEditable => StatusCodes.Status409Conflict,
+        TrainingErrors.ProgramEditConflict => StatusCodes.Status409Conflict,
+
+        // I8: all three are raised by bodiless POSTs (/activate, /complete) — there is no payload
+        // for the client to edit, so this mapper's own rule ("422 means the payload itself was
+        // unacceptable") puts them with the other state conflicts above, not the 422 default they
+        // fell into before. That previously left /activate returning 409 for program.already_active
+        // and program.archived but 422 for program.needs_at_least_one_day — same class, same
+        // endpoint, two codes.
+        TrainingErrors.SessionNeedsWorkingSet => StatusCodes.Status409Conflict,
+        TrainingErrors.ProgramNeedsDay => StatusCodes.Status409Conflict,
+        TrainingErrors.ProgramDayNeedsPrescription => StatusCodes.Status409Conflict,
 
         // RULING R25 (Task 12 review): a request body referencing a nonexistent exercise (e.g.
         // POST /api/programs with a bad exerciseId) is 422, not 404 — the endpoint and the

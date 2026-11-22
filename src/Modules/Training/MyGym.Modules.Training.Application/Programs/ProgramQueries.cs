@@ -15,7 +15,7 @@ public sealed class GetProgramQueryHandler(ITrainingProgramRepository programs)
         var program = await programs.GetByIdAsync(query.ProgramId, ct);
 
         var visible = program is not null
-            && (program.OwnerUserId == query.Actor || program.Visibility == ProgramVisibility.Public);
+            && ProgramVisibilityPolicy.IsVisibleTo(program, query.Actor, ProgramStatus.Active);
 
         // Not-found rather than forbidden: a program the actor may not see returns the same
         // response as one that does not exist, so nobody can probe which program ids are real.
@@ -40,7 +40,7 @@ public sealed class PreviewProgramDayQueryHandler(
     {
         var program = await programs.GetByIdAsync(query.ProgramId, ct);
         var visible = program is not null
-            && (program.OwnerUserId == query.Actor || program.Visibility == ProgramVisibility.Public);
+            && ProgramVisibilityPolicy.IsVisibleTo(program, query.Actor, ProgramStatus.Active);
 
         // Not-found rather than forbidden: same reasoning as GetProgramQueryHandler above.
         if (!visible)

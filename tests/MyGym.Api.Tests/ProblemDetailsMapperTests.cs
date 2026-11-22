@@ -21,6 +21,8 @@ public class ProblemDetailsMapperTests
     [InlineData(AuthErrors.InitDataSignatureInvalid, StatusCodes.Status401Unauthorized)]
     [InlineData(AuthErrors.InitDataExpired, StatusCodes.Status401Unauthorized)]
     [InlineData(AuthErrors.RefreshTokenInvalid, StatusCodes.Status401Unauthorized)]
+    [InlineData(IdentityErrors.TelegramIdInvalid, StatusCodes.Status400BadRequest)]
+    [InlineData(IdentityErrors.FirstNameRequired, StatusCodes.Status400BadRequest)]
     [InlineData(IdentityErrors.UserNotFound, StatusCodes.Status404NotFound)]
     [InlineData(TrainingErrors.ProgramNotFound, StatusCodes.Status404NotFound)]
     [InlineData(TrainingErrors.ProgramDayNotFound, StatusCodes.Status404NotFound)]
@@ -32,6 +34,12 @@ public class ProblemDetailsMapperTests
     [InlineData(TrainingErrors.ProgramAlreadyActive, StatusCodes.Status409Conflict)]
     [InlineData(TrainingErrors.ProgramArchived, StatusCodes.Status409Conflict)]
     [InlineData(TrainingErrors.ProgramNotEditable, StatusCodes.Status409Conflict)]
+    [InlineData(TrainingErrors.ProgramEditConflict, StatusCodes.Status409Conflict)]
+    // I8: bodiless POSTs (/activate, /complete) raise these three — there is no payload to edit,
+    // so they belong with the state conflicts above, not the 422 default.
+    [InlineData(TrainingErrors.SessionNeedsWorkingSet, StatusCodes.Status409Conflict)]
+    [InlineData(TrainingErrors.ProgramNeedsDay, StatusCodes.Status409Conflict)]
+    [InlineData(TrainingErrors.ProgramDayNeedsPrescription, StatusCodes.Status409Conflict)]
     [InlineData(IdentityErrors.BirthYearOutOfBounds, StatusCodes.Status422UnprocessableEntity)]
     [InlineData(TrainingErrors.SetRepsOutOfBounds, StatusCodes.Status422UnprocessableEntity)]
     // RULING R25: a bad exercise id inside a request body (not a route segment) is a 422

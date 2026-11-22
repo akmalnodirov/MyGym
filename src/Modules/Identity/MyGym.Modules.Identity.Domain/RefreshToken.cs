@@ -33,5 +33,11 @@ public interface IRefreshTokenRepository
 {
     Task<RefreshToken?> FindActiveAsync(string tokenHash, DateTimeOffset now, CancellationToken ct);
     Task AddAsync(RefreshToken token, CancellationToken ct);
-    Task RevokeAllForUserAsync(UserId userId, DateTimeOffset now, CancellationToken ct);
+
+    /// <summary>
+    /// I10: a real hard delete, not a revoke. Spec §10 requires "a real hard delete across all
+    /// module schemas" on account deletion; revoking (setting RevokedAt) left the rows in place
+    /// forever, still carrying the deleted user's id and token hash, with no FK to clean them up.
+    /// </summary>
+    Task<int> DeleteAllForUserAsync(UserId userId, CancellationToken ct);
 }
