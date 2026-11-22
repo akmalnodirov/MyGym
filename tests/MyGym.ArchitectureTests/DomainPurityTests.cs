@@ -75,23 +75,29 @@ public class DomainPurityTests
 
     /// <summary>
     /// A violation looks like: <c>TrainingProgram.Days</c> changing from
-    /// <c>IReadOnlyList&lt;ProgramDay&gt;</c> back to a public <c>List&lt;ProgramDay&gt;</c>, which
-    /// would let a caller outside the aggregate call <c>.Add</c>/<c>.Remove</c> directly and bypass
-    /// the aggregate's invariants. This is not vacuous: TrainingProgram.Days, WorkoutSession.Exercises,
-    /// SessionExercise.Sets, and Exercise.PrimaryMuscles/SecondaryMuscles/Names/Aliases are all
-    /// currently public IReadOnlyList-typed properties on an AggregateRoot&lt;TId&gt; subtype, so the
-    /// reflection scan has real candidates to inspect on every run, not an empty set.
+    /// <c>IReadOnlyList&lt;ProgramDay&gt;</c> back to a public <c>List&lt;ProgramDay&gt;</c>, or to
+    /// <c>IList&lt;ProgramDay&gt;</c>, or to <c>ICollection&lt;ProgramDay&gt;</c> — all three let a
+    /// caller outside the aggregate call <c>.Add</c>/<c>.Remove</c> directly and bypass the
+    /// aggregate's invariants just as readily as <c>List&lt;T&gt;</c> does. The predicate below
+    /// matches all three generic type definitions, not only <c>List&lt;&gt;</c>, so it can't be
+    /// defeated by swapping to one of the other two mutable shapes. This is not vacuous:
+    /// TrainingProgram.Days, WorkoutSession.Exercises, SessionExercise.Sets, and
+    /// Exercise.PrimaryMuscles/SecondaryMuscles/Names/Aliases are all currently public
+    /// IReadOnlyList-typed properties on an AggregateRoot&lt;TId&gt; subtype, so the reflection scan
+    /// has real candidates to inspect on every run, not an empty set.
     /// </summary>
     [Theory]
     [MemberData(nameof(DomainAssemblies))]
     public void Aggregate_roots_do_not_expose_mutable_collections(Assembly domain)
     {
+        var mutableCollectionTypes = new[] { typeof(List<>), typeof(IList<>), typeof(ICollection<>) };
+
         var offenders = Types.InAssembly(domain)
             .That().Inherit(typeof(MyGym.SharedKernel.AggregateRoot<>))
             .GetTypes()
             .SelectMany(type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             .Where(property => property.PropertyType.IsGenericType
-                               && property.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
+                               && mutableCollectionTypes.Contains(property.PropertyType.GetGenericTypeDefinition()))
             .Select(property => $"{property.DeclaringType!.Name}.{property.Name}")
             .ToList();
 
