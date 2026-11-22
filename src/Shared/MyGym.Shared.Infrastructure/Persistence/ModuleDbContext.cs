@@ -30,13 +30,32 @@ public abstract class ModuleDbContext(DbContextOptions options, IDomainEventDisp
 
         await using var transaction = await Database.BeginTransactionAsync(ct);
 
-        var written = await base.SaveChangesAsync(ct);
-        foreach (var root in roots)
-            root.ClearDomainEvents();
+        // acceptAllChangesOnSuccess: false — SaveChangesAsync must not mark the change tracker
+        // Unchanged until the ambient transaction has actually committed. Otherwise, if
+        // DispatchAsync throws below, the database rolls back but the tracker has already moved on
+        // and the events are already gone: a caller reusing this context finds nothing to re-save
+        // and no events to re-raise, while the write itself never happened. Accepting changes (and
+        // clearing events) only after a successful commit keeps the tracker and the database from
+        // silently diverging.
+        var written = await base.SaveChangesAsync(acceptAllChangesOnSuccess: false, ct);
 
         await dispatcher.DispatchAsync(events, ct);
         await transaction.CommitAsync(ct);
 
+        ChangeTracker.AcceptAllChanges();
+        foreach (var root in roots)
+            root.ClearDomainEvents();
+
         return written;
     }
+
+    /// <summary>
+    /// The synchronous SaveChanges family is a separate virtual chain from SaveChangesAsync and
+    /// would otherwise silently bypass domain event dispatch entirely — no error, just a write with
+    /// no events delivered. Disabled outright so that mistake fails loudly instead.
+    /// </summary>
+    public sealed override int SaveChanges(bool acceptAllChangesOnSuccess) =>
+        throw new NotSupportedException(
+            $"{GetType().Name} does not support the synchronous SaveChanges path because it would " +
+            $"bypass domain event dispatch. Use {nameof(SaveChangesAsync)} instead.");
 }

@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.DependencyInjection;
 using MyGym.SharedKernel;
 
@@ -31,7 +33,21 @@ public sealed class DomainEventDispatcher(IServiceProvider services) : IDomainEv
                     continue;
 
                 var method = handlerType.GetMethod(nameof(IDomainEventHandler<IDomainEvent>.HandleAsync))!;
-                await (Task)method.Invoke(handler, [domainEvent, ct])!;
+
+                try
+                {
+                    // A handler implemented as a non-async method that throws before returning its
+                    // Task throws synchronously, right here, and MethodBase.Invoke always wraps that
+                    // in a TargetInvocationException — losing the original exception type at the call
+                    // site. A handler implemented as `async` never throws synchronously (the compiler
+                    // always returns a Task, faulted if necessary), so this catch never fires for it;
+                    // the `await` below unwraps that case's real exception on its own.
+                    await (Task)method.Invoke(handler, [domainEvent, ct])!;
+                }
+                catch (TargetInvocationException tie) when (tie.InnerException is not null)
+                {
+                    ExceptionDispatchInfo.Capture(tie.InnerException).Throw();
+                }
             }
         }
     }
