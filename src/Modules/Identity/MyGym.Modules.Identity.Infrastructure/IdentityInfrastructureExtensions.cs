@@ -15,6 +15,7 @@ public static class IdentityInfrastructureExtensions
             .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IAppUserRepository, AppUserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IIdentityUnitOfWork>(sp => sp.GetRequiredService<IdentityDbContext>());
 
         return services;
