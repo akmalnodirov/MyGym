@@ -1,4 +1,5 @@
 using MyGym.Modules.ExerciseCatalog.Contracts;
+using MyGym.Modules.Identity.Contracts;
 using MyGym.Modules.Training.Domain;
 using MyGym.Modules.Training.Domain.Programs;
 using MyGym.SharedKernel;
@@ -10,10 +11,16 @@ public sealed record CreateProgramCommand(UserId Owner, string Name, IReadOnlyLi
 public sealed class CreateProgramCommandHandler(
     ITrainingProgramRepository programs,
     IExerciseCatalogQueries catalog,
+    IAthleteProfileQueries profiles,
     ITrainingUnitOfWork unitOfWork) : ICommandHandler<CreateProgramCommand, ProgramResponse>
 {
     public async Task<Result<ProgramResponse>> HandleAsync(CreateProgramCommand command, CancellationToken ct)
     {
+        // C3 (sixth site) — see LoadingPreferencesLookup.EnsureUserExistsAsync's doc comment.
+        var exists = await LoadingPreferencesLookup.EnsureUserExistsAsync(profiles, command.Owner, ct);
+        if (exists.IsFailure)
+            return Result<ProgramResponse>.Failure(exists.Error);
+
         var built = await ProgramBuilder.BuildAsync(
             command.Owner, command.Name, command.Days, catalog, ct);
 

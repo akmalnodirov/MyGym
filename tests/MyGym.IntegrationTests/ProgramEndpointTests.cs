@@ -101,6 +101,28 @@ public class ProgramEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         fetched!.Name.ShouldBe("3 Kunlik Muscle Gain");
     }
 
+    /// <summary>
+    /// C4 reproduction (Phase 4 test #4): a missing "days" key binds SaveProgramRequest.Days to
+    /// null, and ProgramBuilder.BuildAsync's days.SelectMany(...) threw a NullReferenceException —
+    /// an unhandled 500 — before AddValidation() plus [Required] on Days existed. There was
+    /// previously no request-validation layer in the host at all.
+    /// </summary>
+    [Fact]
+    public async Task A_program_request_with_no_days_key_is_rejected_not_a_500()
+    {
+        var (client, _, _) = await SetupAsync();
+
+        using var body = new StringContent(
+            """{"name":"Missing days"}""", System.Text.Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync("/api/programs", body, TestContext.Current.CancellationToken);
+
+        // .NET 10's AddValidation() returns 400 for a failed [Required] check — not the 500 this
+        // used to throw, and not the 422 the rest of this file's domain-validation failures use
+        // (those pass model binding and fail a business rule instead).
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
     [Fact]
     public async Task An_unknown_exercise_id_is_rejected()
     {
@@ -258,23 +280,32 @@ public class ProgramEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         bench.SuggestedWorkingWeight.ShouldBeNull();
         bench.Warmup.ShouldAllBe(step => step.Weight == 0m);
 
-        // Kept as a cheap shape check, not dropped, even though it is trivially satisfied when
-        // every weight is 0 and proves nothing about rounding itself (see the comment above this
-        // method for where rounding is actually proven) — it still catches a future change that
-        // stops rounding to the increment entirely, e.g. one that starts returning a raw decimal.
-        foreach (var step in bench.Warmup)
-            (step.Weight % 2.5m).ShouldBe(0m);
+        // The review's vacuity finding: (step.Weight % 2.5m).ShouldBe(0m) was removed from here.
+        // Every weight in this test is 0, so 0 % 2.5m == 0 regardless of whether rounding works at
+        // all — including for a hypothetical regression that started returning a raw, unrounded
+        // decimal (0 scaled by any percentage is still 0). It caught nothing. Real rounding
+        // (80 kg -> 20 / 40 / 62.5 kg) is proven at the domain level by
+        // WarmupRampTests.Bench_ramp_resolves_to_loadable_weights and, through this same endpoint
+        // with real logged history, by SessionEndpointTests' critical-path test.
     }
 
     [Fact]
-    public async Task The_catalog_can_be_searched_in_uzbek()
+    public async Task The_catalog_can_be_searched_and_rendered_in_uzbek()
     {
         var client = await _api.CreateAuthenticatedClientAsync(Random.Shared.NextInt64(1, long.MaxValue));
 
+        // Unrrun-tests finding #7: the old test passed no `lang`, so it proved Uzbek *matching*
+        // (the search matches "shtanga" against the stored Uzbek name regardless of which
+        // language is requested) but not Uzbek *rendering* — every returned Name was English,
+        // because `lang` defaults to "en". Passing lang=uz and asserting on the rendered Name
+        // closes that gap: a regression that stopped honouring `lang` and always returned
+        // NameFor("en") would fail this, where the old test would still pass.
         var results = await client.GetFromJsonAsync<List<ExercisePayload>>(
-            "/api/exercises?q=shtanga", TestContext.Current.CancellationToken);
+            "/api/exercises?q=shtanga&lang=uz", TestContext.Current.CancellationToken);
 
         results!.ShouldNotBeEmpty();
+        results.ShouldContain(e => e.Name.Contains("shtanga", StringComparison.OrdinalIgnoreCase));
+        results.ShouldNotContain(e => e.Name == "Flat Barbell Bench Press");
     }
 
     [Fact]

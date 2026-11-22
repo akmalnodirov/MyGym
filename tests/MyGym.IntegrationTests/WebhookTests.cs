@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using Shouldly;
+using Telegram.Bot.Requests;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace MyGym.IntegrationTests;
 
@@ -52,7 +54,7 @@ public class WebhookTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_valid_start_update_is_accepted()
+    public async Task A_valid_start_update_sends_a_mini_app_button()
     {
         var client = _api.CreateClient();
         client.DefaultRequestHeaders.Add("X-Telegram-Bot-Api-Secret-Token", "test-webhook-secret");
@@ -61,5 +63,20 @@ public class WebhookTests(PostgresFixture postgres) : IAsyncLifetime
             "/api/telegram/webhook", StartUpdate(), TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Unrun-tests finding #4: asserting only the status code let this pass even with the
+        // entire "/start" handling block deleted — FakeTelegramBotClient recorded nothing and
+        // nothing about the response depended on whether a message was actually sent. Assert the
+        // bot's one real side effect instead: a SendMessage carrying a WebAppInfo button pointed
+        // at the configured HTTPS Mini App URL (appsettings.json's MiniApp:Url, which ApiFixture
+        // does not override).
+        var sent = _api.TelegramBot.SentRequests.OfType<SendMessageRequest>().ShouldHaveSingleItem();
+        sent.ChatId.Identifier.ShouldBe(555L);
+
+        var markup = sent.ReplyMarkup.ShouldBeOfType<InlineKeyboardMarkup>();
+        var button = markup.InlineKeyboard.SelectMany(row => row).ShouldHaveSingleItem();
+
+        button.WebApp.ShouldNotBeNull();
+        button.WebApp!.Url.ShouldBe("https://localhost:5001");
     }
 }

@@ -23,4 +23,20 @@ internal static class LoadingPreferencesLookup
             ? Result<LoadingPreferences>.Failure(new Error(IdentityContractErrors.UserNotFound, "User not found."))
             : Result<LoadingPreferences>.Success(preferences);
     }
+
+    /// <summary>
+    /// C3, sixth site: <c>CreateProgramCommandHandler</c> is the one Training write path that
+    /// otherwise never touches the Identity module at all — creating a program needs no weight
+    /// unit — so without this, a deleted user's still-valid 15-minute access token could create
+    /// programs indefinitely even after all four other write paths were closed. The review's own
+    /// enumeration of "five places" missed this one despite naming POST /api/programs as a
+    /// symptom of C3 in the same breath; closed here with the same mechanism rather than left as a
+    /// gap in a fix whose whole point was no deleted user can write training data.
+    /// </summary>
+    public static async Task<Result> EnsureUserExistsAsync(
+        IAthleteProfileQueries profiles, UserId actor, CancellationToken ct)
+    {
+        var result = await ResolveAsync(profiles, actor, ct);
+        return result.IsFailure ? Result.Failure(result.Error) : Result.Success();
+    }
 }

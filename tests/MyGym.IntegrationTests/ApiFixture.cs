@@ -16,6 +16,13 @@ public sealed class ApiFixture(PostgresFixture postgres) : WebApplicationFactory
 {
     public const string BotToken = "123456:TEST-BOT-TOKEN-FOR-INTEGRATION";
 
+    /// <summary>
+    /// The exact fake registered into this run's DI container — not a fresh one — so a test can
+    /// inspect what the webhook actually sent through it. See
+    /// FakeTelegramBotClient.SentRequests's doc comment for why this exists (unrun-tests finding #4).
+    /// </summary>
+    public FakeTelegramBotClient TelegramBot { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -31,7 +38,7 @@ public sealed class ApiFixture(PostgresFixture postgres) : WebApplicationFactory
         // above. Replaced here with a no-op fake so WebhookTests' "/start" case never attempts a
         // genuine outbound call to api.telegram.org — see FakeTelegramBotClient's own comment.
         builder.ConfigureTestServices(services =>
-            services.AddSingleton<ITelegramBotClient>(new FakeTelegramBotClient()));
+            services.AddSingleton<ITelegramBotClient>(TelegramBot));
     }
 
     public async Task<HttpClient> CreateAuthenticatedClientAsync(long telegramUserId, string firstName = "Akmal")

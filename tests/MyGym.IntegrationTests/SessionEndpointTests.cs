@@ -79,6 +79,55 @@ public class SessionEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         preview.Exercises[0].Warmup.Select(w => w.Weight).ShouldBe([20m, 40m, 62.5m]);
     }
 
+    /// <summary>
+    /// C1 reproduction (Phase 4 test #1, unrun-tests finding #11): no test previously changed the
+    /// athlete's preferred unit and then read a session or a day preview, which is exactly why C1
+    /// survived fifteen review passes. Logs a working set in kilograms (the default), completes
+    /// the session, switches the preference to Pounds, then re-reads the now-completed session and
+    /// the day's preview — both of which resolve a suggested weight from history logged in the
+    /// unit the athlete was using *then*, not the unit they are using *now*. Before the fix this
+    /// 500'd from Weight.RoundDownTo; this also pins the converted value, not just the status code.
+    /// </summary>
+    [Fact]
+    public async Task Changing_the_preferred_unit_does_not_break_the_session_or_the_preview()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (client, programId, dayId) = await CreateActiveProgramAsync();
+        var session = await StartAsync(client, programId, dayId);
+        var exerciseId = session.Exercises[0].Id;
+
+        var logged = await client.PostAsJsonAsync(
+            $"/api/sessions/{session.Id}/exercises/{exerciseId}/sets",
+            new { clientSetId = Guid.NewGuid(), kind = "Working", weight = 80m, reps = 8, rir = (int?)2 }, ct);
+        logged.StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        (await client.PostAsync($"/api/sessions/{session.Id}/complete", null, ct))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var updated = await client.PatchAsJsonAsync("/api/me", new
+        {
+            birthYear = (int?)null,
+            bodyweight = (decimal?)null,
+            preferredUnit = "Pounds",
+            loadingIncrement = 5m,
+            experienceLevel = "Intermediate",
+            availableDaysPerWeek = (int?)null,
+            sessionMinutes = (int?)null,
+            timeZoneId = "UTC"
+        }, ct);
+        updated.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // 80 kg converted exactly into pounds: 80 * 2.20462262.
+        const decimal expectedPounds = 176.3698096m;
+
+        var stored = await client.GetFromJsonAsync<SessionPayload>($"/api/sessions/{session.Id}", ct);
+        stored!.Exercises[0].SuggestedWorkingWeight.ShouldBe(expectedPounds);
+
+        var preview = await client.GetFromJsonAsync<DayPreviewPayload>(
+            $"/api/programs/{programId}/days/{dayId}/preview", ct);
+        preview!.Exercises[0].SuggestedWorkingWeight.ShouldBe(expectedPounds);
+    }
+
     [Fact]
     public async Task Logging_the_same_client_set_id_twice_creates_one_set()
     {
