@@ -1,6 +1,12 @@
 namespace MyGym.SharedKernel;
 
-public abstract class AggregateRoot<TId>(TId id) : Entity<TId>(id)
+public interface IHasDomainEvents
+{
+    IReadOnlyList<IDomainEvent> DomainEvents { get; }
+    void ClearDomainEvents();
+}
+
+public abstract class AggregateRoot<TId>(TId id) : Entity<TId>(id), IHasDomainEvents
     where TId : notnull
 {
     private readonly List<IDomainEvent> _domainEvents = [];

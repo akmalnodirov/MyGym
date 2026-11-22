@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyGym.Modules.Training.Domain\MyGym.Modules.Training.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Shared\MyGym.Shared.Infrastructure\MyGym.Shared.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+  </ItemGroup>
+
+</Project>

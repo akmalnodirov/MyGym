@@ -23,14 +23,14 @@ public sealed class TrainingProgram : AggregateRoot<ProgramId>
 
     private readonly List<ProgramDay> _days = [];
 
-    private TrainingProgram(ProgramId id, UserId ownerUserId, string name, ProgramId? forkedFrom)
+    private TrainingProgram(ProgramId id, UserId ownerUserId, string name, ProgramId? forkedFromProgramId)
         : base(id)
     {
         OwnerUserId = ownerUserId;
         Name = name;
         Status = ProgramStatus.Draft;
         Visibility = ProgramVisibility.Private;
-        ForkedFromProgramId = forkedFrom;
+        ForkedFromProgramId = forkedFromProgramId;
         RevisionNumber = 1;
     }
 
@@ -49,7 +49,7 @@ public sealed class TrainingProgram : AggregateRoot<ProgramId>
         return validated.IsFailure
             ? Result<TrainingProgram>.Failure(validated.Error)
             : Result<TrainingProgram>.Success(
-                new TrainingProgram(ProgramId.New(), ownerUserId, validated.Value, forkedFrom: null));
+                new TrainingProgram(ProgramId.New(), ownerUserId, validated.Value, forkedFromProgramId: null));
     }
 
     public Result Rename(string name)
@@ -168,7 +168,7 @@ public sealed class TrainingProgram : AggregateRoot<ProgramId>
 
     public TrainingProgram Fork(UserId newOwnerUserId)
     {
-        var fork = new TrainingProgram(ProgramId.New(), newOwnerUserId, Name, forkedFrom: Id);
+        var fork = new TrainingProgram(ProgramId.New(), newOwnerUserId, Name, forkedFromProgramId: Id);
         fork._days.AddRange(Days.Select(d => d.CopyTo(fork.Id)));
         return fork;
     }

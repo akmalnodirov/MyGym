@@ -18,6 +18,17 @@ public sealed class SessionExercise : Entity<SessionExerciseId>
         Prescription = prescription;
     }
 
+    /// <summary>
+    /// Used only by EF Core's materialiser when loading a session from the database. EF Core
+    /// cannot bind a structural (owned or complex) property through a constructor parameter, so
+    /// <see cref="Prescription"/> is left for EF's property setter to populate after
+    /// construction. Must never be called from application code — use <see cref="Create"/> instead.
+    /// </summary>
+    private SessionExercise() : base(default!)
+    {
+        Prescription = null!;
+    }
+
     public SessionId SessionId { get; private set; }
     public int Order { get; private set; }
     public PrescriptionSnapshot Prescription { get; private set; }

@@ -36,6 +36,17 @@ public sealed class LoggedSet : Entity<LoggedSetId>
         LoggedAt = loggedAt;
     }
 
+    /// <summary>
+    /// Used only by EF Core's materialiser when loading a logged set from the database. EF Core
+    /// cannot bind a structural (owned or complex) property through a constructor parameter, so
+    /// <see cref="Weight"/> is left for EF's property setter to populate after construction.
+    /// Must never be called from application code — use <see cref="Create"/> instead.
+    /// </summary>
+    private LoggedSet() : base(default!)
+    {
+        Weight = null!;
+    }
+
     public SessionExerciseId SessionExerciseId { get; private set; }
     public int Order { get; private set; }
     public SetKind Kind { get; private set; }

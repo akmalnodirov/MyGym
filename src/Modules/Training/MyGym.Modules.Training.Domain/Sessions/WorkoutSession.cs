@@ -24,6 +24,17 @@ public sealed class WorkoutSession : AggregateRoot<SessionId>
         Status = SessionStatus.InProgress;
     }
 
+    /// <summary>
+    /// Used only by EF Core's materialiser when loading a session from the database. EF Core
+    /// cannot bind a structural (owned or complex) property through a constructor parameter, so
+    /// <see cref="Origin"/> is left for EF's property setter to populate after construction.
+    /// Must never be called from application code — use <see cref="Start"/> instead.
+    /// </summary>
+    private WorkoutSession() : base(default!)
+    {
+        Origin = null!;
+    }
+
     public UserId UserId { get; private set; }
     public SessionOrigin Origin { get; private set; }
     public SessionStatus Status { get; private set; }
