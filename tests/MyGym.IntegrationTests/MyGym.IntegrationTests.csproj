@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="xunit.v3.mtp-v2" />
     <PackageReference Include="Testcontainers.PostgreSql" />
@@ -24,6 +25,7 @@
     <ProjectReference Include="..\..\src\Modules\Training\MyGym.Modules.Training.Infrastructure\MyGym.Modules.Training.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\MyGym.Modules.Identity.Infrastructure\MyGym.Modules.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\ExerciseCatalog\MyGym.Modules.ExerciseCatalog.Infrastructure\MyGym.Modules.ExerciseCatalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Host\MyGym.Api\MyGym.Api.csproj" />
   </ItemGroup>
 
 </Project>

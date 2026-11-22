@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Identity\MyGym.Modules.Identity.Application\MyGym.Modules.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\MyGym.Modules.Identity.Infrastructure\MyGym.Modules.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\ExerciseCatalog\MyGym.Modules.ExerciseCatalog.Infrastructure\MyGym.Modules.ExerciseCatalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Training\MyGym.Modules.Training.Infrastructure\MyGym.Modules.Training.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+  </ItemGroup>
+
+</Project>
