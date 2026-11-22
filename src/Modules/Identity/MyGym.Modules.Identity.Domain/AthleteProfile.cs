@@ -36,6 +36,19 @@ public sealed class AthleteProfile : ValueObject
         TimeZoneId = timeZoneId;
     }
 
+    /// <summary>
+    /// Used only by EF Core's materialiser when loading a profile from the database. EF Core
+    /// cannot bind a structural (owned) property through a constructor parameter, so
+    /// <see cref="Bodyweight"/> and <see cref="LoadingIncrement"/> are left for EF to populate
+    /// via backing-field access after construction. Must never be called from application code —
+    /// use <see cref="Create"/> instead.
+    /// </summary>
+    private AthleteProfile()
+    {
+        LoadingIncrement = null!;
+        TimeZoneId = null!;
+    }
+
     public int? BirthYear { get; }
     public Weight? Bodyweight { get; }
     public WeightUnit PreferredUnit { get; }

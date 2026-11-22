@@ -31,6 +31,21 @@ public sealed partial class Exercise : AggregateRoot<ExerciseId>
         _aliases.AddRange(aliases);
     }
 
+    /// <summary>
+    /// Used only by EF Core's materialiser when loading an exercise from the database. EF Core
+    /// cannot bind a converted collection property (<see cref="PrimaryMuscles"/>,
+    /// <see cref="SecondaryMuscles"/>) or a structural collection (<see cref="Names"/>) through a
+    /// constructor parameter, so they are left for EF to populate via property setters /
+    /// backing-field access after construction. Must never be called from application code — use
+    /// <see cref="Create"/> or <see cref="CreateCustom"/> instead.
+    /// </summary>
+    private Exercise() : base(default!)
+    {
+        Slug = null!;
+        PrimaryMuscles = null!;
+        SecondaryMuscles = null!;
+    }
+
     public string Slug { get; private set; }
     public MovementPattern MovementPattern { get; private set; }
     public IReadOnlyList<MuscleGroup> PrimaryMuscles { get; private set; }

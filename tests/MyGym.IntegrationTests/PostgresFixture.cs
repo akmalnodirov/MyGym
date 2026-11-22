@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using MyGym.Modules.ExerciseCatalog.Infrastructure;
+using MyGym.Modules.Identity.Infrastructure;
 using MyGym.Modules.Training.Infrastructure;
 using Testcontainers.PostgreSql;
 
@@ -15,8 +17,13 @@ public sealed class PostgresFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         await _container.StartAsync();
-        await using var context = CreateTrainingContext();
-        await context.Database.MigrateAsync();
+
+        await using (var training = CreateTrainingContext())
+            await training.Database.MigrateAsync();
+        await using (var identity = CreateIdentityContext())
+            await identity.Database.MigrateAsync();
+        await using (var catalog = CreateCatalogContext())
+            await catalog.Database.MigrateAsync();
     }
 
     public TrainingDbContext CreateTrainingContext()
@@ -27,6 +34,26 @@ public sealed class PostgresFixture : IAsyncLifetime
             .Options;
 
         return new TrainingDbContext(options, dispatcher: null);
+    }
+
+    public IdentityDbContext CreateIdentityContext()
+    {
+        var options = new DbContextOptionsBuilder<IdentityDbContext>()
+            .UseNpgsql(ConnectionString)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+
+        return new IdentityDbContext(options, dispatcher: null);
+    }
+
+    public CatalogDbContext CreateCatalogContext()
+    {
+        var options = new DbContextOptionsBuilder<CatalogDbContext>()
+            .UseNpgsql(ConnectionString)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+
+        return new CatalogDbContext(options, dispatcher: null);
     }
 
     public async Task ResetAsync()
