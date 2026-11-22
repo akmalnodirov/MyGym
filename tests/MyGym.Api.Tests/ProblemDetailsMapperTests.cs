@@ -22,7 +22,6 @@ public class ProblemDetailsMapperTests
     [InlineData(AuthErrors.InitDataExpired, StatusCodes.Status401Unauthorized)]
     [InlineData(AuthErrors.RefreshTokenInvalid, StatusCodes.Status401Unauthorized)]
     [InlineData(IdentityErrors.UserNotFound, StatusCodes.Status404NotFound)]
-    [InlineData(CatalogErrors.ExerciseNotFound, StatusCodes.Status404NotFound)]
     [InlineData(TrainingErrors.ProgramNotFound, StatusCodes.Status404NotFound)]
     [InlineData(TrainingErrors.ProgramDayNotFound, StatusCodes.Status404NotFound)]
     [InlineData(TrainingErrors.SessionNotFound, StatusCodes.Status404NotFound)]
@@ -35,6 +34,9 @@ public class ProblemDetailsMapperTests
     [InlineData(TrainingErrors.ProgramNotEditable, StatusCodes.Status409Conflict)]
     [InlineData(IdentityErrors.BirthYearOutOfBounds, StatusCodes.Status422UnprocessableEntity)]
     [InlineData(TrainingErrors.SetRepsOutOfBounds, StatusCodes.Status422UnprocessableEntity)]
+    // RULING R25: a bad exercise id inside a request body (not a route segment) is a 422
+    // field-validation failure, not a 404 — see ProblemDetailsMapper's comment on this code.
+    [InlineData(CatalogErrors.ExerciseNotFound, StatusCodes.Status422UnprocessableEntity)]
     [InlineData("some.unmapped_code", StatusCodes.Status422UnprocessableEntity)]
     public void Maps_each_known_bucket_and_falls_back_to_422_for_anything_unmapped(
         string errorCode, int expectedStatus)

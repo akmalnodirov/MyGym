@@ -64,7 +64,8 @@ internal static class ProgramBuilder
             .ToList();
 
         if (!await catalog.AllExistAsync(exerciseIds, ct))
-            return Result.Failure(new Error("exercise.not_found", "One or more exercises do not exist."));
+            return Result.Failure(new Error(
+                ExerciseCatalogErrors.ExerciseNotFound, "One or more exercises do not exist."));
 
         return Result.Success();
     }

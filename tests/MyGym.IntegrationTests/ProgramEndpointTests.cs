@@ -230,8 +230,16 @@ public class ProgramEndpointTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_day_preview_resolves_every_warmup_to_a_loadable_weight()
+    public async Task A_day_preview_with_no_training_history_returns_a_stable_zero_valued_shape()
     {
+        // RULING R27 (Task 12 review): renamed from "...resolves_every_warmup_to_a_loadable_weight"
+        // because, with no history, every weight is exactly 0 and 0 % 2.5m == 0 holds whether or
+        // not rounding works at all — the old name claimed to prove rounding when it could not.
+        // What this test actually proves: a never-trained exercise does not make the preview fail
+        // or omit the exercise; it resolves against a zero working weight with no suggested weight.
+        // Real rounding (80 kg -> 20 / 40 / 62.5 kg) is proven at the domain level by Task 3's
+        // Bench_ramp_resolves_to_loadable_weights, and at this same HTTP preview endpoint, with
+        // real logged history, by Task 13's critical-path test — deliberately not duplicated here.
         var (client, benchId, rowId) = await SetupAsync();
         var program = await CreateAsync(client, benchId, rowId);
         var dayId = program.Days[0].Id;
@@ -250,7 +258,10 @@ public class ProgramEndpointTests(PostgresFixture postgres) : IAsyncLifetime
         bench.SuggestedWorkingWeight.ShouldBeNull();
         bench.Warmup.ShouldAllBe(step => step.Weight == 0m);
 
-        // Every resolved weight must sit on the athlete's 2.5 kg increment.
+        // Kept as a cheap shape check, not dropped, even though it is trivially satisfied when
+        // every weight is 0 and proves nothing about rounding itself (see the comment above this
+        // method for where rounding is actually proven) — it still catches a future change that
+        // stops rounding to the increment entirely, e.g. one that starts returning a raw decimal.
         foreach (var step in bench.Warmup)
             (step.Weight % 2.5m).ShouldBe(0m);
     }

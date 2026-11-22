@@ -1,4 +1,4 @@
-using MyGym.Modules.ExerciseCatalog.Domain;
+using MyGym.Modules.ExerciseCatalog.Contracts;
 using MyGym.Modules.Identity.Domain;
 using MyGym.Modules.Training.Domain;
 using MyGym.Shared.Infrastructure.Auth;
@@ -19,7 +19,6 @@ public static class ProblemDetailsMapper
         AuthErrors.RefreshTokenInvalid => StatusCodes.Status401Unauthorized,
 
         IdentityErrors.UserNotFound => StatusCodes.Status404NotFound,
-        CatalogErrors.ExerciseNotFound => StatusCodes.Status404NotFound,
         TrainingErrors.ProgramNotFound => StatusCodes.Status404NotFound,
         TrainingErrors.ProgramDayNotFound => StatusCodes.Status404NotFound,
         TrainingErrors.SessionNotFound => StatusCodes.Status404NotFound,
@@ -31,6 +30,17 @@ public static class ProblemDetailsMapper
         TrainingErrors.ProgramAlreadyActive => StatusCodes.Status409Conflict,
         TrainingErrors.ProgramArchived => StatusCodes.Status409Conflict,
         TrainingErrors.ProgramNotEditable => StatusCodes.Status409Conflict,
+
+        // RULING R25 (Task 12 review): a request body referencing a nonexistent exercise (e.g.
+        // POST /api/programs with a bad exerciseId) is 422, not 404 — the endpoint and the
+        // addressed program both exist; only the submitted content is semantically invalid, which
+        // the client should group with the other field-validation failures below (rep_range.
+        // inverted, warmup.percent_not_ascending, ...). Named explicitly rather than left to the
+        // default so the choice is visible, and so a rename of the constant breaks this file at
+        // compile time instead of silently falling out of sync. Contrast
+        // TrainingErrors.SessionExerciseNotFound above, which addresses a session exercise by id
+        // in the route itself and is correctly 404.
+        ExerciseCatalogErrors.ExerciseNotFound => StatusCodes.Status422UnprocessableEntity,
 
         _ => StatusCodes.Status422UnprocessableEntity
     };
