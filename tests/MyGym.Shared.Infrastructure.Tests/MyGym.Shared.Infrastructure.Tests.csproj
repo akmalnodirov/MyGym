@@ -17,6 +17,11 @@
   <ItemGroup>
     <PackageReference Include="Shouldly" />
     <PackageReference Include="xunit.v3.mtp-v2" />
+    <!-- R34 regression test: a real relational provider to exercise ModuleDbContext's actual
+         save pipeline without Docker/Testcontainers. Not the forbidden EF InMemory provider — the
+         InMemory ban is about never using it to prove database-enforced invariants like unique
+         indexes; this proves virtual-dispatch plumbing, where SQLite is an honest tool. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 
   <ItemGroup>

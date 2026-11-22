@@ -25,7 +25,14 @@ public abstract class ModuleDbContext(DbContextOptions options, IDomainEventDisp
             foreach (var root in roots)
                 root.ClearDomainEvents();
 
-            return await base.SaveChangesAsync(ct);
+            // Must be the two-arg form. DbContext.SaveChangesAsync(CancellationToken) is
+            // implemented as an *unqualified* call to SaveChangesAsync(true, cancellationToken) —
+            // unqualified means virtual dispatch on the runtime type, so base.SaveChangesAsync(ct)
+            // would re-enter this type's own sealed SaveChangesAsync(bool, CancellationToken)
+            // override below and throw NotSupportedException on every save that reaches this
+            // branch. Calling the two-arg overload directly through base. is non-virtual dispatch
+            // and reaches DbContext's real implementation, exactly like line ~40 below already does.
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess: true, ct);
         }
 
         await using var transaction = await Database.BeginTransactionAsync(ct);
