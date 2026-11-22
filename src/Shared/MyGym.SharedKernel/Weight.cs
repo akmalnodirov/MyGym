@@ -21,10 +21,15 @@ public sealed class WeightIncrement : ValueObject
 
     public static WeightIncrement DefaultKg { get; } = new(2.5m, WeightUnit.Kilograms);
 
-    public static Result<WeightIncrement> Create(decimal value, WeightUnit unit) =>
-        value <= 0m
+    public static Result<WeightIncrement> Create(decimal value, WeightUnit unit)
+    {
+        if (!Enum.IsDefined(unit))
+            return Result<WeightIncrement>.Failure(new Error("weight_increment.unit_invalid", "Unknown weight unit."));
+
+        return value <= 0m
             ? Result<WeightIncrement>.Failure(new Error(NotPositiveCode, "Increment must be positive."))
             : Result<WeightIncrement>.Success(new WeightIncrement(value, unit));
+    }
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {
@@ -51,6 +56,13 @@ public sealed class Weight : ValueObject, IComparable<Weight>
 
     public static Result<Weight> Create(decimal value, WeightUnit unit)
     {
+        // C4: an undefined unit (e.g. the request-level default when "preferredUnit" is omitted,
+        // or an out-of-range value that slipped past upstream validation) used to fall through to
+        // the `unit == WeightUnit.Kilograms ? value : value / PoundsPerKilogram` branch below and
+        // be silently treated as Pounds — dividing every weight by ~2.2 instead of failing loudly.
+        if (!Enum.IsDefined(unit))
+            return Result<Weight>.Failure(new Error("weight.unit_invalid", "Unknown weight unit."));
+
         if (value < 0m)
             return Result<Weight>.Failure(new Error("weight.negative", "Weight cannot be negative."));
 

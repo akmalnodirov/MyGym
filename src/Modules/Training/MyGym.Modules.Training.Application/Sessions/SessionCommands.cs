@@ -28,8 +28,11 @@ public sealed class LogSetCommandHandler(
         if (session is null || session.UserId != command.Actor)
             return Result<LoggedSetResponse>.Failure(new Error(TrainingErrors.SessionNotFound, "Session not found."));
 
-        var preferences = await profiles.GetLoadingPreferencesAsync(command.Actor, ct)
-                          ?? new LoadingPreferences(WeightUnit.Kilograms, 2.5m);
+        var preferencesResult = await LoadingPreferencesLookup.ResolveAsync(profiles, command.Actor, ct);
+        if (preferencesResult.IsFailure)
+            return Result<LoggedSetResponse>.Failure(preferencesResult.Error);
+
+        var preferences = preferencesResult.Value;
 
         var weight = Weight.Create(command.Weight, preferences.PreferredUnit);
         if (weight.IsFailure)
@@ -62,8 +65,11 @@ public sealed class EditSetCommandHandler(
         if (session is null || session.UserId != command.Actor)
             return Result.Failure(new Error(TrainingErrors.SessionNotFound, "Session not found."));
 
-        var preferences = await profiles.GetLoadingPreferencesAsync(command.Actor, ct)
-                          ?? new LoadingPreferences(WeightUnit.Kilograms, 2.5m);
+        var preferencesResult = await LoadingPreferencesLookup.ResolveAsync(profiles, command.Actor, ct);
+        if (preferencesResult.IsFailure)
+            return Result.Failure(preferencesResult.Error);
+
+        var preferences = preferencesResult.Value;
 
         var weight = Weight.Create(command.Weight, preferences.PreferredUnit);
         if (weight.IsFailure)

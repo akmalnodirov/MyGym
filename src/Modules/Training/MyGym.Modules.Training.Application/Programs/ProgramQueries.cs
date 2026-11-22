@@ -52,8 +52,11 @@ public sealed class PreviewProgramDayQueryHandler(
             return Result<DayPreviewResponse>.Failure(
                 new Error(TrainingErrors.ProgramDayNotFound, "Day not found."));
 
-        var preferences = await profiles.GetLoadingPreferencesAsync(query.Actor, ct)
-                          ?? new LoadingPreferences(WeightUnit.Kilograms, 2.5m);
+        var preferencesResult = await LoadingPreferencesLookup.ResolveAsync(profiles, query.Actor, ct);
+        if (preferencesResult.IsFailure)
+            return Result<DayPreviewResponse>.Failure(preferencesResult.Error);
+
+        var preferences = preferencesResult.Value;
 
         var increment = WeightIncrement.Create(preferences.Increment, preferences.PreferredUnit).Value;
 
@@ -64,9 +67,15 @@ public sealed class PreviewProgramDayQueryHandler(
         {
             history.TryGetValue(prescription.ExerciseId, out var lastWorking);
 
+            // C1: lastWorking carries the unit it was logged in, which may differ from the
+            // athlete's current preference reported as WeightUnit below. Normalise first, or the
+            // response claims a kg number is pounds (or throws resolving the warm-up ramp).
+            var normalizedLastWorking = SuggestedWeightPresentation.ConvertOrNull(
+                lastWorking, preferences.PreferredUnit);
+
             // No history yet: resolve against zero so the shape is stable and the Mini App can
             // prompt for a starting weight. Auto-progression is sub-project 2's job.
-            var working = lastWorking ?? Weight.Create(0m, preferences.PreferredUnit).Value;
+            var working = normalizedLastWorking ?? Weight.Create(0m, preferences.PreferredUnit).Value;
             var resolved = prescription.Warmup.Resolve(working, increment);
 
             return new PreviewExerciseResponse(
@@ -77,7 +86,7 @@ public sealed class PreviewProgramDayQueryHandler(
                 prescription.TargetReps.Max,
                 (int)prescription.Rest.Min.TotalSeconds,
                 (int)prescription.Rest.Max.TotalSeconds,
-                lastWorking?.Value,
+                normalizedLastWorking?.Value,
                 preferences.PreferredUnit.ToString(),
                 resolved.Select(r => new ResolvedWarmupResponse(r.Weight.Value, r.Reps, r.IsOptional)).ToList(),
                 prescription.Notes);

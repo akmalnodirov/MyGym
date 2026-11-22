@@ -68,6 +68,12 @@ public sealed class LoggedSet : Entity<LoggedSetId>
         Guid clientSetId,
         DateTimeOffset loggedAt)
     {
+        // C4: an out-of-range kind (e.g. {"kind": 99}, which the global JsonStringEnumConverter
+        // accepts by its underlying int by default) used to be stored as-is — a set that is
+        // neither Warmup nor Working, invisible to CountWorkingSets() and to Complete's guard.
+        if (!Enum.IsDefined(kind))
+            return Result<LoggedSet>.Failure(new Error(TrainingErrors.SetKindInvalid, "Unknown set kind."));
+
         var validated = Validate(reps, rir);
         return validated.IsFailure
             ? Result<LoggedSet>.Failure(validated.Error)

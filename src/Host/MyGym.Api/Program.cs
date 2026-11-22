@@ -1,7 +1,10 @@
+using System.Net;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -29,6 +32,12 @@ var connectionString = builder.Configuration.GetConnectionString("Postgres")
 // Options — bound and eagerly validated. A misconfigured deployment (e.g. a signing key under
 // 32 bytes) refuses to boot rather than booting healthy and failing the first sign-in.
 builder.Services.AddValidatedAppSettings(builder.Configuration);
+
+// C4: .NET 10's built-in minimal-API validation. Request records across the host carry
+// [Required]/[Range]/[EnumDataType] attributes (see each Endpoints/*.cs and *Dtos.cs file); without
+// this call those attributes are inert and a null collection or out-of-range enum reaches the
+// handler as a NullReferenceException (500) or a silently-accepted default instead of a 400.
+builder.Services.AddValidation();
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
@@ -81,7 +90,9 @@ builder.Services.AddScoped<IQueryHandler<GetSessionQuery, SessionResponse>, GetS
 builder.Services.AddScoped<IQueryHandler<GetCurrentSessionQuery, SessionResponse?>, GetCurrentSessionQueryHandler>();
 
 // Task 14: account deletion and the Telegram bot webhook.
-builder.Services.Configure<MiniAppOptions>(builder.Configuration.GetSection(MiniAppOptions.SectionName));
+// MiniAppOptions is already bound and eagerly validated by AddValidatedAppSettings above; the
+// Configure<MiniAppOptions> call that used to be here was a second, redundant binding of the same
+// section (minor fix-before-merge item 5).
 builder.Services.AddSingleton<ITelegramBotClient>(sp =>
     new TelegramBotClient(sp.GetRequiredService<IOptions<TelegramAuthOptions>>().Value.BotToken));
 
@@ -122,6 +133,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// I3: spec §11 deploys behind Caddy, so without this, every request's RemoteIpAddress is Caddy's
+// own address and the limiter below's IP fallback collapses onto one bucket for every anonymous
+// client. Caddy is deployed as a sibling process/container on the same small VPS or its private
+// network (never reached across the public internet per spec §11), so trusting the private address
+// ranges — rather than one proxy IP that breaks the moment the VPS is rebuilt — is the right-sized
+// trust boundary. Added on top of the framework's loopback default rather than replacing it, so
+// local/dev (where there is no proxy at all) keeps working unchanged.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("10.0.0.0"), 8));
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("192.168.0.0"), 16));
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -138,6 +164,27 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+// I3: a second, separate RateLimiterOptions — not registered through DI, so it runs as its own
+// RateLimitingMiddleware instance placed before UseAuthentication below. The GlobalLimiter
+// registered via AddRateLimiter above only ever evaluates after UseAuthorization runs (it sits
+// after it in the pipeline), so an unauthenticated flood against a protected endpoint used to never
+// reach any limiter at all: AuthorizationMiddleware returns 401 and short-circuits before
+// UseRateLimiter() is even reached. This cheap, IP-partitioned limiter sits ahead of
+// UseAuthentication specifically to close that gap; the per-user one from AddRateLimiter still runs
+// afterward for authenticated traffic. Both are needed — neither alone covers both failure modes.
+var anonymousRateLimiterOptions = new RateLimiterOptions { RejectionStatusCode = StatusCodes.Status429TooManyRequests };
+anonymousRateLimiterOptions.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    RateLimitPartition.GetTokenBucketLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 120,
+            TokensPerPeriod = 120,
+            ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddOtlpExporter())
     .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddOtlpExporter());
@@ -151,23 +198,55 @@ var app = builder.Build();
 if (app.Configuration.GetValue("RunMigrationsOnStartup", defaultValue: true))
 {
     using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<IdentityDbContext>().Database.MigrateAsync();
-    await scope.ServiceProvider.GetRequiredService<CatalogDbContext>().Database.MigrateAsync();
-    await scope.ServiceProvider.GetRequiredService<TrainingDbContext>().Database.MigrateAsync();
-    await CatalogSeeder.SeedAsync(
-        scope.ServiceProvider.GetRequiredService<CatalogDbContext>(), CancellationToken.None);
+    var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+    var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+    var training = scope.ServiceProvider.GetRequiredService<TrainingDbContext>();
+
+    // Promoted minor: migrations and seeding ran at every startup immediately after three ungated
+    // MigrateAsync() calls, with no coordination between instances. Two instances starting
+    // together — a rolling deploy, a restart loop, a second replica — both compute CatalogSeeder's
+    // "missing" set, both insert, and one dies on ix_exercises_slug: a boot crash loop. A Postgres
+    // advisory lock serialises "one instance migrates and seeds at a time" across however many
+    // processes reach this block concurrently. It is session-scoped on this connection and releases
+    // automatically when the connection closes at the end of this using scope, so there is no
+    // explicit unlock to forget.
+    const long StartupAdvisoryLockKey = 2026_11_21;
+    await identity.Database.OpenConnectionAsync();
+    await identity.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_lock({StartupAdvisoryLockKey})");
+
+    await identity.Database.MigrateAsync();
+    await catalog.Database.MigrateAsync();
+    await training.Database.MigrateAsync();
+    await CatalogSeeder.SeedAsync(catalog, CancellationToken.None);
 }
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-// Authentication/authorization must run before the rate limiter: the limiter's partition callback
+// I3: must run before anything reads RemoteIpAddress — both rate limiters below, and the
+// forwarded-headers middleware itself needs to run before authentication/authorization too, since
+// neither depends on the client address but ordering it earliest keeps every later middleware
+// consistent about which address is "the client".
+app.UseForwardedHeaders();
+
+// I3: a cheap, IP-partitioned limiter ahead of authentication, so an unauthenticated flood against
+// a protected endpoint is bounded even though AuthorizationMiddleware below will reject it with a
+// 401 before the per-user limiter ever runs. See the two RateLimiterOptions built above for why
+// this has to be a second, separately-positioned middleware instance rather than one GlobalLimiter.
+app.UseRateLimiter(anonymousRateLimiterOptions);
+
+// Authentication/authorization must run before the per-user rate limiter: its partition callback
 // reads context.User.FindFirst("sub") (see the MapInboundClaims comment above), and that claim
 // only exists once UseAuthentication() has populated the principal. Reversed, every authenticated
 // request would see the unauthenticated default principal and silently fall back to per-IP limiting.
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+
+// I12: must run ahead of routing/endpoint dispatch so the secret check happens before the
+// webhook's Update parameter is model-bound. See UseTelegramWebhookSecretGuard's own doc comment
+// for why an endpoint filter could not do this.
+app.UseTelegramWebhookSecretGuard();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 

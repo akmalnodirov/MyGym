@@ -72,6 +72,19 @@ public sealed class AthleteProfile : ValueObject
         int? sessionMinutes,
         string timeZoneId)
     {
+        // C4 defence in depth: the host's [EnumDataType] validation attribute is the first line of
+        // defence, but the domain factory — the one place every caller, including a future second
+        // host, must pass through — must not trust that an out-of-range enum was already caught
+        // upstream. Weight.Create silently treats an undefined WeightUnit as Pounds (dividing every
+        // value by ~2.2), and an undefined ExperienceLevel would otherwise persist unnoticed.
+        if (!Enum.IsDefined(preferredUnit))
+            return Result<AthleteProfile>.Failure(new Error(
+                IdentityErrors.WeightUnitInvalid, "Unknown weight unit."));
+
+        if (!Enum.IsDefined(experienceLevel))
+            return Result<AthleteProfile>.Failure(new Error(
+                IdentityErrors.ExperienceLevelInvalid, "Unknown experience level."));
+
         if (birthYear is < MinBirthYear or > MaxBirthYear)
             return Result<AthleteProfile>.Failure(new Error(
                 IdentityErrors.BirthYearOutOfBounds,

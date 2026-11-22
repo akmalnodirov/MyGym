@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using MyGym.Api.Auth;
 using MyGym.Api.Errors;
 using MyGym.Modules.Training.Application.Programs;
@@ -8,8 +10,14 @@ namespace MyGym.Api.Endpoints;
 
 public static class ProgramEndpoints
 {
-    public sealed record SaveProgramRequest(string Name, IReadOnlyList<ProgramDayInput> Days);
-    public sealed record SetVisibilityRequest(ProgramVisibility Visibility);
+    // C4: Days is marked required so a missing or null "days" key fails .NET 10's minimal-API
+    // validation (via AddValidation() in Program.cs) with a 400/422 instead of reaching
+    // ProgramBuilder.BuildAsync as a null and throwing a NullReferenceException from
+    // days.SelectMany(...) — the exact reproduction in the review.
+    public sealed record SaveProgramRequest(
+        [Required] string Name, [Required] IReadOnlyList<ProgramDayInput> Days);
+
+    public sealed record SetVisibilityRequest([EnumDataType(typeof(ProgramVisibility))] ProgramVisibility Visibility);
 
     public static void MapProgramEndpoints(this IEndpointRouteBuilder app)
     {
@@ -25,7 +33,7 @@ public static class ProgramEndpoints
                 new CreateProgramCommand(me.UserId, request.Name, request.Days), ct);
 
             return result.ToHttpResult(program => Results.Created($"/api/programs/{program.Id}", program));
-        });
+        }).WithMetadata(new RequestSizeLimitAttribute(256 * 1024));
 
         group.MapGet("", async (
             ICurrentUser me,
@@ -54,7 +62,7 @@ public static class ProgramEndpoints
                 new ReplaceProgramCommand(me.UserId, ProgramId.From(id), request.Name, request.Days), ct);
 
             return result.ToHttpResult();
-        });
+        }).WithMetadata(new RequestSizeLimitAttribute(256 * 1024));
 
         group.MapPost("/{id:guid}/activate", async (
             Guid id, ICurrentUser me, ICommandHandler<ActivateProgramCommand> handler, CancellationToken ct) =>
@@ -74,7 +82,8 @@ public static class ProgramEndpoints
             CancellationToken ct) =>
             (await handler.HandleAsync(
                 new SetProgramVisibilityCommand(me.UserId, ProgramId.From(id), request.Visibility), ct))
-                .ToHttpResult());
+                .ToHttpResult())
+            .WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapPost("/{id:guid}/fork", async (
             Guid id,

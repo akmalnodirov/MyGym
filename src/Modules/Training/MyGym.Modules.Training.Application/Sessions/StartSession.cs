@@ -28,8 +28,11 @@ public sealed class StartSessionCommandHandler(
             return Result<SessionResponse>.Failure(new Error(
                 TrainingErrors.SessionAlreadyInProgress, "Finish or abandon the open session first."));
 
-        var preferences = await profiles.GetLoadingPreferencesAsync(command.Actor, ct)
-                          ?? new LoadingPreferences(WeightUnit.Kilograms, 2.5m);
+        var preferencesResult = await LoadingPreferencesLookup.ResolveAsync(profiles, command.Actor, ct);
+        if (preferencesResult.IsFailure)
+            return Result<SessionResponse>.Failure(preferencesResult.Error);
+
+        var preferences = preferencesResult.Value;
 
         var increment = WeightIncrement.Create(preferences.Increment, preferences.PreferredUnit).Value;
 

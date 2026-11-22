@@ -18,25 +18,29 @@ public sealed class GetSessionQueryHandler(
         if (session is null || session.UserId != query.Actor)
             return Result<SessionResponse>.Failure(new Error(TrainingErrors.SessionNotFound, "Session not found."));
 
-        return Result<SessionResponse>.Success(await EnrichAsync(session, query.Actor, lastWeights, profiles, ct));
+        return await EnrichAsync(session, query.Actor, lastWeights, profiles, ct);
     }
 
-    internal static async Task<SessionResponse> EnrichAsync(
+    internal static async Task<Result<SessionResponse>> EnrichAsync(
         WorkoutSession session,
         UserId actor,
         ILastWorkingWeightQuery lastWeights,
         IAthleteProfileQueries profiles,
         CancellationToken ct)
     {
-        var preferences = await profiles.GetLoadingPreferencesAsync(actor, ct)
-                          ?? new LoadingPreferences(WeightUnit.Kilograms, 2.5m);
+        var preferencesResult = await LoadingPreferencesLookup.ResolveAsync(profiles, actor, ct);
+        if (preferencesResult.IsFailure)
+            return Result<SessionResponse>.Failure(preferencesResult.Error);
+
+        var preferences = preferencesResult.Value;
 
         var increment = WeightIncrement.Create(preferences.Increment, preferences.PreferredUnit).Value;
 
         var suggested = await lastWeights.GetTopWorkingWeightsAsync(
             actor, session.Exercises.Select(e => e.Prescription.ExerciseId).ToList(), ct);
 
-        return SessionMapper.ToResponse(session, suggested, increment, preferences.PreferredUnit);
+        return Result<SessionResponse>.Success(
+            SessionMapper.ToResponse(session, suggested, increment, preferences.PreferredUnit));
     }
 }
 
@@ -50,11 +54,13 @@ public sealed class GetCurrentSessionQueryHandler(
     public async Task<Result<SessionResponse?>> HandleAsync(GetCurrentSessionQuery query, CancellationToken ct)
     {
         var session = await sessions.GetInProgressForUserAsync(query.Actor, ct);
+        if (session is null)
+            return Result<SessionResponse?>.Success(null);
 
-        return session is null
-            ? Result<SessionResponse?>.Success(null)
-            : Result<SessionResponse?>.Success(
-                await GetSessionQueryHandler.EnrichAsync(session, query.Actor, lastWeights, profiles, ct));
+        var enriched = await GetSessionQueryHandler.EnrichAsync(session, query.Actor, lastWeights, profiles, ct);
+        return enriched.IsFailure
+            ? Result<SessionResponse?>.Failure(enriched.Error)
+            : Result<SessionResponse?>.Success(enriched.Value);
     }
 }
 

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using MyGym.Modules.Training.Domain.Programs;
 using MyGym.Modules.Training.Domain.ValueObjects;
 
@@ -6,6 +7,8 @@ namespace MyGym.Modules.Training.Application.Programs;
 // ── Inputs ────────────────────────────────────────────────────────────────
 public sealed record WarmupStepInput(decimal PercentOfWorking, int Reps, bool IsOptional);
 
+// C4: Warmup is required (not null) so a null step list fails validation at the boundary instead
+// of reaching WarmupRamp.Create as null and throwing from the NullReferenceException that follows.
 public sealed record PrescriptionInput(
     Guid ExerciseId,
     Guid? AlternativeExerciseId,
@@ -14,11 +17,13 @@ public sealed record PrescriptionInput(
     int RepMax,
     int RestMinSeconds,
     int RestMaxSeconds,
-    IReadOnlyList<WarmupStepInput> Warmup,
+    [Required] IReadOnlyList<WarmupStepInput> Warmup,
     string? Notes);
 
 public sealed record ProgramDayInput(
-    string Label, DayOfWeek? DayOfWeek, IReadOnlyList<PrescriptionInput> Prescriptions);
+    [Required] string Label,
+    DayOfWeek? DayOfWeek,
+    [Required] IReadOnlyList<PrescriptionInput> Prescriptions);
 
 // ── Outputs ───────────────────────────────────────────────────────────────
 public sealed record WarmupStepResponse(decimal PercentOfWorking, int Reps, bool IsOptional);

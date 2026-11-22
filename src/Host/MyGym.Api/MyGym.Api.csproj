@@ -16,4 +16,10 @@
     <PackageReference Include="Telegram.Bot" />
   </ItemGroup>
 
+  <!-- C4: required so the AddValidation() source-generated interceptor that powers minimal-API
+       DataAnnotations validation actually gets woven in. -->
+  <PropertyGroup>
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.Http.Validation.Generated</InterceptorsNamespaces>
+  </PropertyGroup>
+
 </Project>

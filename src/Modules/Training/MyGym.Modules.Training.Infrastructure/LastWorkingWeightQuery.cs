@@ -23,6 +23,18 @@ namespace MyGym.Modules.Training.Infrastructure;
 /// straight to the underlying entity types via <c>context.Set&lt;T&gt;()</c>, which are fully
 /// mapped and queryable on their own regardless of the Ignored computed properties above them.
 /// </remarks>
+/// <remarks>
+/// I4: the heaviest working set for a given (session, exercise) pair must be chosen by comparing
+/// weights across units — 100 lb (≈45 kg) beats 50 kg numerically but is lighter — and the chosen
+/// row's value and unit must come from the <em>same</em> set, not from two independently ordered
+/// subqueries that could disagree on a tie. The second round trip below is therefore a flat,
+/// unaggregated join: every working set logged for a matching exercise in a candidate session,
+/// still carrying its own value+unit pair. The candidate set is small (at most
+/// <see cref="MaxRecentSessions"/> sessions' worth of working sets for the exercises on one program
+/// day), so picking the per-session-exercise heaviest set, and then the most recent session per
+/// exercise, is done safely in memory instead of risking an unverifiable SQL translation that
+/// cannot be exercised against a real database on this machine right now.
+/// </remarks>
 internal sealed class LastWorkingWeightQuery(TrainingDbContext context) : ILastWorkingWeightQuery
 {
     private const int MaxRecentSessions = 40;
@@ -50,34 +62,41 @@ internal sealed class LastWorkingWeightQuery(TrainingDbContext context) : ILastW
         var sessionIds = recentSessions.Select(s => s.Id).ToList();
         var completedAtBySession = recentSessions.ToDictionary(s => s.Id, s => s.CompletedAt);
 
-        // Round trip 2: the exercises logged in those sessions, with the heaviest working-set
-        // weight for each exposed as a correlated scalar subquery over logged_sets.
-        var rows = await context.Set<SessionExercise>()
+        // Round trip 2: every working set logged for a matching exercise in a candidate session,
+        // as a flat join with no aggregation in SQL — see the I4 remark above for why.
+        var rows = await context.Set<LoggedSet>()
             .AsNoTracking()
-            .Where(e => sessionIds.Contains(e.SessionId) && ids.Contains(e.Prescription.ExerciseId))
-            .Select(e => new
-            {
-                e.SessionId,
-                ExerciseId = e.Prescription.ExerciseId,
-                TopWorkingValue = context.Set<LoggedSet>()
-                    .Where(set => set.SessionExerciseId == e.Id && set.Kind == SetKind.Working)
-                    .Max(set => (decimal?)set.Weight.Value),
-                Unit = context.Set<LoggedSet>()
-                    .Where(set => set.SessionExerciseId == e.Id && set.Kind == SetKind.Working)
-                    .Select(set => set.Weight.Unit)
-                    .FirstOrDefault()
-            })
-            .Where(row => row.TopWorkingValue != null)
+            .Where(set => set.Kind == SetKind.Working)
+            .Join(
+                context.Set<SessionExercise>()
+                    .AsNoTracking()
+                    .Where(e => sessionIds.Contains(e.SessionId) && ids.Contains(e.Prescription.ExerciseId)),
+                set => set.SessionExerciseId,
+                e => e.Id,
+                (set, e) => new
+                {
+                    e.SessionId,
+                    ExerciseId = e.Prescription.ExerciseId,
+                    set.Weight.Value,
+                    set.Weight.Unit
+                })
             .ToListAsync(ct);
 
         return rows
+            // Heaviest working set within each (session, exercise) pair, compared by normalised
+            // kilograms so value and unit are never picked from two different rows.
+            .GroupBy(row => (row.SessionId, row.ExerciseId))
+            .Select(group => group
+                .OrderByDescending(row => Weight.Create(row.Value, row.Unit).Value.ToKilograms())
+                .First())
+            // Then the most recently completed session per exercise — "last" working weight.
             .GroupBy(row => row.ExerciseId)
             .ToDictionary(
                 group => group.Key,
                 group =>
                 {
                     var latest = group.OrderByDescending(row => completedAtBySession[row.SessionId]).First();
-                    return Weight.Create(latest.TopWorkingValue!.Value, latest.Unit).Value;
+                    return Weight.Create(latest.Value, latest.Unit).Value;
                 });
     }
 }

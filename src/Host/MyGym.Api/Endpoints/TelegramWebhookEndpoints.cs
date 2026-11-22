@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using MyGym.Shared.Infrastructure.Auth;
 using Telegram.Bot;
@@ -11,21 +12,42 @@ namespace MyGym.Api.Endpoints;
 public static class TelegramWebhookEndpoints
 {
     public const string SecretTokenHeader = "X-Telegram-Bot-Api-Secret-Token";
+    public const string WebhookPath = "/api/telegram/webhook";
+
+    /// <summary>
+    /// I12: the secret-token check used to run inside the handler, after the `Update` parameter was
+    /// already model-bound — which happens before any endpoint filter can run (filters execute
+    /// after parameter binding, not before it), so only real middleware placed ahead of routing
+    /// actually runs early enough. Without this, an unauthenticated caller forced up to the
+    /// endpoint's request-size-limit worth of JSON deserialisation on every request, and malformed
+    /// JSON returned a framework 400 instead of 401. Branched with UseWhen so it only runs for the
+    /// webhook path and rejoins the main pipeline for everything else.
+    /// </summary>
+    public static IApplicationBuilder UseTelegramWebhookSecretGuard(this IApplicationBuilder app) =>
+        app.UseWhen(
+            context => context.Request.Path.StartsWithSegments(WebhookPath),
+            branch => branch.Use(async (context, next) =>
+            {
+                var telegram = context.RequestServices.GetRequiredService<IOptions<TelegramAuthOptions>>();
+                var presented = context.Request.Headers[SecretTokenHeader].ToString();
+
+                if (!SecretTokensMatch(presented, telegram.Value.WebhookSecretToken))
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+
+                await next(context);
+            }));
 
     public static void MapTelegramWebhook(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/telegram/webhook", async (
-                HttpContext context,
+        app.MapPost(WebhookPath, async (
                 Update update,
-                IOptions<TelegramAuthOptions> telegram,
                 IOptions<MiniAppOptions> miniApp,
                 ITelegramBotClient bot,
                 CancellationToken ct) =>
             {
-                var presented = context.Request.Headers[SecretTokenHeader].ToString();
-                if (!SecretTokensMatch(presented, telegram.Value.WebhookSecretToken))
-                    return Results.Unauthorized();
-
                 if (update.Message?.Text is "/start" && update.Message.Chat.Id is var chatId)
                 {
                     await bot.SendMessage(
@@ -40,7 +62,8 @@ public static class TelegramWebhookEndpoints
                 // silently ignored update type we do not handle yet.
                 return Results.Ok();
             })
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .WithMetadata(new RequestSizeLimitAttribute(64 * 1024));
     }
 
     /// <summary>

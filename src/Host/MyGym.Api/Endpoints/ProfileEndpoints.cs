@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using MyGym.Api.Auth;
 using MyGym.Api.Errors;
 using MyGym.Modules.Identity.Application;
@@ -8,15 +10,20 @@ namespace MyGym.Api.Endpoints;
 
 public static class ProfileEndpoints
 {
+    // C4: PATCH /api/me is a full replace. TimeZoneId is [Required] because an omitted value binds
+    // to null, and TimeZoneInfo.TryFindSystemTimeZoneById(null, ...) throws ArgumentNullException
+    // (500) rather than returning false — the exact reproduction in the review. PreferredUnit and
+    // ExperienceLevel are [EnumDataType] because an omitted enum property silently binds to the
+    // default (WeightUnit)0 / (ExperienceLevel)0, neither of which is a defined member.
     public sealed record UpdateProfileRequest(
         int? BirthYear,
         decimal? Bodyweight,
-        WeightUnit PreferredUnit,
+        [EnumDataType(typeof(WeightUnit))] WeightUnit PreferredUnit,
         decimal LoadingIncrement,
-        ExperienceLevel ExperienceLevel,
+        [EnumDataType(typeof(ExperienceLevel))] ExperienceLevel ExperienceLevel,
         int? AvailableDaysPerWeek,
         int? SessionMinutes,
-        string TimeZoneId);
+        [Required] string TimeZoneId);
 
     public static void MapProfileEndpoints(this IEndpointRouteBuilder app)
     {
@@ -43,7 +50,7 @@ public static class ProfileEndpoints
                 request.SessionMinutes, request.TimeZoneId), ct);
 
             return result.ToHttpResult();
-        });
+        }).WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapDelete("", async (
             ICurrentUser me, ICommandHandler<DeleteAccountCommand> handler, CancellationToken ct) =>

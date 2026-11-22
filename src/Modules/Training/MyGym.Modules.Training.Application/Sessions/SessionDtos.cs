@@ -42,7 +42,12 @@ internal static class SessionMapper
         var exercises = session.Exercises.Select(exercise =>
         {
             suggestedWeights.TryGetValue(exercise.Prescription.ExerciseId, out var suggested);
-            var working = suggested ?? Weight.Create(0m, unit).Value;
+
+            // C1: suggested carries the unit it was logged in, which may differ from the
+            // athlete's current preference (increment is built in the current unit). Normalise
+            // before combining the two, or RoundDownTo throws on a unit mismatch.
+            var normalizedSuggested = SuggestedWeightPresentation.ConvertOrNull(suggested, unit);
+            var working = normalizedSuggested ?? Weight.Create(0m, unit).Value;
             var resolved = exercise.Prescription.Warmup.Resolve(working, increment);
 
             return new SessionExerciseResponse(
@@ -56,7 +61,7 @@ internal static class SessionMapper
                 (int)exercise.Prescription.Rest.Min.TotalSeconds,
                 (int)exercise.Prescription.Rest.Max.TotalSeconds,
                 resolved.Select(r => new ResolvedWarmupResponse(r.Weight.Value, r.Reps, r.IsOptional)).ToList(),
-                suggested?.Value,
+                normalizedSuggested?.Value,
                 exercise.Sets.Select(LoggedSetResponse.From).ToList());
         }).ToList();
 

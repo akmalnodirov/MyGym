@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using MyGym.Api.Auth;
 using MyGym.Api.Errors;
 using MyGym.Modules.Training.Application.Sessions;
@@ -10,7 +12,14 @@ namespace MyGym.Api.Endpoints;
 public static class SessionEndpoints
 {
     public sealed record StartSessionRequest(Guid? ProgramId, Guid? ProgramDayId, decimal? Bodyweight);
-    public sealed record LogSetRequest(Guid ClientSetId, SetKind Kind, decimal Weight, int Reps, int? Rir);
+
+    // C4: Kind is bound with a global JsonStringEnumConverter that (by default) also accepts the
+    // raw underlying int, so {"kind": 99} used to deserialise straight into an undefined SetKind
+    // that CountWorkingSets() and Complete's guard both silently ignore. EnumDataType rejects it at
+    // the boundary with a 400/422 instead.
+    public sealed record LogSetRequest(
+        Guid ClientSetId, [EnumDataType(typeof(SetKind))] SetKind Kind, decimal Weight, int Reps, int? Rir);
+
     public sealed record EditSetRequest(decimal Weight, int Reps, int? Rir);
 
     public sealed record AddExerciseRequest(
@@ -34,7 +43,7 @@ public static class SessionEndpoints
                 request.Bodyweight), ct);
 
             return result.ToHttpResult(session => Results.Created($"/api/sessions/{session.Id}", session));
-        });
+        }).WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapGet("/current", async (
             ICurrentUser me,
@@ -83,7 +92,7 @@ public static class SessionEndpoints
 
             return result.ToHttpResult(added => Results.Created(
                 $"/api/sessions/{id}/exercises/{added.SessionExerciseId}", added));
-        });
+        }).WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapPost("/{id:guid}/exercises/{exerciseId:guid}/sets", async (
             Guid id,
@@ -99,7 +108,7 @@ public static class SessionEndpoints
 
             return result.ToHttpResult(set => Results.Created(
                 $"/api/sessions/{id}/exercises/{exerciseId}/sets/{set.Id}", set));
-        });
+        }).WithMetadata(new RequestSizeLimitAttribute(2 * 1024));
 
         group.MapPatch("/{id:guid}/exercises/{exerciseId:guid}/sets/{setId:guid}", async (
             Guid id, Guid exerciseId, Guid setId, EditSetRequest request,
@@ -107,7 +116,8 @@ public static class SessionEndpoints
             (await handler.HandleAsync(new EditSetCommand(
                 me.UserId, SessionId.From(id), SessionExerciseId.From(exerciseId),
                 LoggedSetId.From(setId), request.Weight, request.Reps, request.Rir), ct))
-                .ToHttpResult());
+                .ToHttpResult())
+            .WithMetadata(new RequestSizeLimitAttribute(2 * 1024));
 
         group.MapDelete("/{id:guid}/exercises/{exerciseId:guid}/sets/{setId:guid}", async (
             Guid id, Guid exerciseId, Guid setId,

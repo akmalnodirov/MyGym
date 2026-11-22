@@ -35,4 +35,5 @@ public static class TrainingErrors
     public const string SetNotFound = "set.not_found";
     public const string SetRepsOutOfBounds = "set.reps_out_of_bounds";
     public const string SetRirOutOfBounds = "set.rir_out_of_bounds";
+    public const string SetKindInvalid = "set.kind_invalid";
 }
