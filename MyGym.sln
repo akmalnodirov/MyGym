@@ -61,6 +61,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGym.Api.Tests", "tests\My
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGym.Modules.Training.Application", "src\Modules\Training\MyGym.Modules.Training.Application\MyGym.Modules.Training.Application.csproj", "{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGym.ArchitectureTests", "tests\MyGym.ArchitectureTests\MyGym.ArchitectureTests.csproj", "{828CFC03-5D2B-4890-B39D-D1F74F5CD138}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -323,6 +325,18 @@ Global
 		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|x64.Build.0 = Release|Any CPU
 		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|x86.ActiveCfg = Release|Any CPU
 		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|x86.Build.0 = Release|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Debug|x64.Build.0 = Debug|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Debug|x86.Build.0 = Debug|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Release|Any CPU.Build.0 = Release|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Release|x64.ActiveCfg = Release|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Release|x64.Build.0 = Release|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Release|x86.ActiveCfg = Release|Any CPU
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -355,5 +369,6 @@ Global
 		{C81F047B-C48B-4DB3-956D-CCEEE11ED8B8} = {0EC62A1A-9858-3A60-8A0C-FC9AACFA2EC7}
 		{2860F179-94E9-4F24-A52D-6E09D7AA25F0} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73} = {F7AF1082-FB2F-E4E0-768D-EFCE0A4F6DC4}
+		{828CFC03-5D2B-4890-B39D-D1F74F5CD138} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

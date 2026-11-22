@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: mygym
+      POSTGRES_USER: mygym
+      POSTGRES_PASSWORD: mygym-local
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mygym"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      ConnectionStrings__Postgres: "Host=postgres;Database=mygym;Username=mygym;Password=mygym-local"
+      Telegram__BotToken: "${TELEGRAM_BOT_TOKEN}"
+      Telegram__WebhookSecretToken: "${TELEGRAM_WEBHOOK_SECRET}"
+      Jwt__Issuer: mygym
+      Jwt__Audience: mygym-miniapp
+      Jwt__SigningKey: "${JWT_SIGNING_KEY}"
+      MiniApp__Url: "${MINIAPP_URL}"
+    ports: ["8080:8080"]
+
+volumes:
+  pgdata:
