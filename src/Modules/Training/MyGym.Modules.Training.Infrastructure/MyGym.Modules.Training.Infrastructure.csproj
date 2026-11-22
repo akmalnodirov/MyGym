@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MyGym.Modules.Training.Domain\MyGym.Modules.Training.Domain.csproj" />
     <ProjectReference Include="..\..\..\Shared\MyGym.Shared.Infrastructure\MyGym.Shared.Infrastructure.csproj" />
+    <ProjectReference Include="..\MyGym.Modules.Training.Application\MyGym.Modules.Training.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

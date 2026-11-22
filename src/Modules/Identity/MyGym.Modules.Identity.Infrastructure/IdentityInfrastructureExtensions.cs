@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MyGym.Modules.Identity.Contracts;
 using MyGym.Modules.Identity.Domain;
 
 namespace MyGym.Modules.Identity.Infrastructure;
@@ -16,6 +17,7 @@ public static class IdentityInfrastructureExtensions
 
         services.AddScoped<IAppUserRepository, AppUserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IAthleteProfileQueries, AthleteProfileQueries>();
         services.AddScoped<IIdentityUnitOfWork>(sp => sp.GetRequiredService<IdentityDbContext>());
 
         return services;

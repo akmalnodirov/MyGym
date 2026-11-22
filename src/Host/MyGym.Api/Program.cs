@@ -10,6 +10,7 @@ using MyGym.Api.Endpoints;
 using MyGym.Modules.ExerciseCatalog.Infrastructure;
 using MyGym.Modules.Identity.Application;
 using MyGym.Modules.Identity.Infrastructure;
+using MyGym.Modules.Training.Application.Programs;
 using MyGym.Modules.Training.Infrastructure;
 using MyGym.Shared.Infrastructure.Auth;
 using MyGym.Shared.Infrastructure.Persistence;
@@ -50,6 +51,16 @@ builder.Services.AddScoped<ICommandHandler<RefreshTokensCommand, AuthTokensRespo
     RefreshTokensCommandHandler>();
 builder.Services.AddScoped<IQueryHandler<GetProfileQuery, ProfileResponse>, GetProfileQueryHandler>();
 builder.Services.AddScoped<ICommandHandler<UpdateProfileCommand, ProfileResponse>, UpdateProfileCommandHandler>();
+
+// Task 12: program authoring and the day preview.
+builder.Services.AddScoped<ICommandHandler<CreateProgramCommand, ProgramResponse>, CreateProgramCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<ReplaceProgramCommand, ProgramResponse>, ReplaceProgramCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<ActivateProgramCommand>, ActivateProgramCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<ArchiveProgramCommand>, ArchiveProgramCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<SetProgramVisibilityCommand>, SetProgramVisibilityCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<ForkProgramCommand, ProgramResponse>, ForkProgramCommandHandler>();
+builder.Services.AddScoped<IQueryHandler<GetProgramQuery, ProgramResponse>, GetProgramQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<PreviewProgramDayQuery, DayPreviewResponse>, PreviewProgramDayQueryHandler>();
 
 // Parsed once, here, as a strongly-typed JwtOptions — not via raw IConfiguration indexers — so a
 // missing key fails loudly with a message naming the configuration section instead of an NRE from
@@ -140,6 +151,10 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 // Auth and profile endpoints (Task 11). Tasks 12-14 append their own MapXEndpoints() calls here.
 app.MapAuthEndpoints();
 app.MapProfileEndpoints();
+
+// Program authoring and the day preview; exercise search (Task 12).
+app.MapProgramEndpoints();
+app.MapExerciseEndpoints();
 
 app.Run();
 

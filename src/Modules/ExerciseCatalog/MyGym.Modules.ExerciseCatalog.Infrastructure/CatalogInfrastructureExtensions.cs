@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MyGym.Modules.ExerciseCatalog.Contracts;
 using MyGym.Modules.ExerciseCatalog.Domain;
 
 namespace MyGym.Modules.ExerciseCatalog.Infrastructure;
@@ -15,6 +16,7 @@ public static class CatalogInfrastructureExtensions
             .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IExerciseRepository, ExerciseRepository>();
+        services.AddScoped<IExerciseCatalogQueries, ExerciseCatalogQueries>();
         services.AddScoped<ICatalogUnitOfWork>(sp => sp.GetRequiredService<CatalogDbContext>());
 
         return services;

@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyGym.Modules.Training.Domain\MyGym.Modules.Training.Domain.csproj" />
+    <ProjectReference Include="..\..\ExerciseCatalog\MyGym.Modules.ExerciseCatalog.Contracts\MyGym.Modules.ExerciseCatalog.Contracts.csproj" />
+    <ProjectReference Include="..\..\Identity\MyGym.Modules.Identity.Contracts\MyGym.Modules.Identity.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

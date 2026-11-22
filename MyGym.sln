@@ -59,6 +59,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGym.Modules.Identity.Appl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGym.Api.Tests", "tests\MyGym.Api.Tests\MyGym.Api.Tests.csproj", "{2860F179-94E9-4F24-A52D-6E09D7AA25F0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGym.Modules.Training.Application", "src\Modules\Training\MyGym.Modules.Training.Application\MyGym.Modules.Training.Application.csproj", "{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -309,6 +311,18 @@ Global
 		{2860F179-94E9-4F24-A52D-6E09D7AA25F0}.Release|x64.Build.0 = Release|Any CPU
 		{2860F179-94E9-4F24-A52D-6E09D7AA25F0}.Release|x86.ActiveCfg = Release|Any CPU
 		{2860F179-94E9-4F24-A52D-6E09D7AA25F0}.Release|x86.Build.0 = Release|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Debug|x64.Build.0 = Debug|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Debug|x86.Build.0 = Debug|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|x64.ActiveCfg = Release|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|x64.Build.0 = Release|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|x86.ActiveCfg = Release|Any CPU
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -340,5 +354,6 @@ Global
 		{60B1690E-45B3-4196-97B2-D359A18AD18A} = {981C2CF6-E5BB-602A-511C-234B538302B0}
 		{C81F047B-C48B-4DB3-956D-CCEEE11ED8B8} = {0EC62A1A-9858-3A60-8A0C-FC9AACFA2EC7}
 		{2860F179-94E9-4F24-A52D-6E09D7AA25F0} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{FAAE1FA4-0922-4F22-BAE7-3C3F71CA2D73} = {F7AF1082-FB2F-E4E0-768D-EFCE0A4F6DC4}
 	EndGlobalSection
 EndGlobal
