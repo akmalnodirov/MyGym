@@ -1,6 +1,6 @@
 # MyGym Mini App — design
 
-**Sub-project 2 of 4.** The Telegram Mini App client for the workout logger built in
+**Sub-project 2 of 5.** The Telegram Mini App client for the workout logger built in
 sub-project 1. Written 2026-11-23.
 
 **Depends on:** `docs/superpowers/specs/2026-11-21-mygym-workout-logger-design.md` (the backend

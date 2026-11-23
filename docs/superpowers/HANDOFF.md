@@ -8,7 +8,7 @@ is verified, what is not, and what to do next.
 
 | | |
 |---|---|
-| **Backend, passing** | **248 tests**, clean build, 0 warnings |
+| **Backend, passing** | **260 tests**, clean build, 0 warnings |
 | **Mini App, passing** | **194 tests**, typecheck clean, production build clean |
 | **Committed but never executed** | **~52 backend integration tests** across 7 files |
 | **Never run on a real device** | the entire Mini App |
@@ -62,8 +62,25 @@ them.
 ### Then: the Mini App on a real device
 
 1. Start PostgreSQL and the API.
-2. Seed the 3-day program through the API (there is no authoring UI in v1 — that is deliberate, see
-   the Mini App design spec §1).
+2. Seed the 3-day program:
+
+   ```bash
+   BOT_TOKEN=<the same token the API is configured with> TELEGRAM_USER_ID=<your numeric id> \
+     bash scripts/seed-program.sh
+   ```
+
+   `TELEGRAM_USER_ID` is your numeric Telegram id — ask @userinfobot. See `scripts/README.md` for
+   every option.
+
+   There is no authoring UI in v1 — that is deliberate (Mini App design spec §1). The script talks
+   to the public API, signs a real `initData` with the bot token, resolves catalog slugs to ids,
+   and activates the program. Re-running it replaces the program rather than duplicating it, so
+   editing `scripts/programs/akmal-3day.json` and running again is the edit loop.
+
+   The file's contents are validated without a server by
+   `tests/MyGym.Modules.Training.Domain.Tests/SeedProgramFileTests.cs`, so a bad percentage fails
+   as a unit test rather than as an HTTP 422 against a live database.
+
 3. Tunnel the dev server, point a real bot's Mini App URL at the tunnel, and open it in Telegram.
 4. Walk the critical path: sign in, pick today, log a set, finish.
 

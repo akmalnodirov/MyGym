@@ -107,10 +107,14 @@ export const program: Program = {
           repMax: 10,
           restMinSeconds: 120,
           restMaxSeconds: 180,
+          // Fractions, not percentages: WarmupStep.Create requires 0 < p < 1, so the API takes
+          // 0.27 for 27%. The fixture said 27 and nothing caught it, because the preview and
+          // session responses carry resolved weights rather than percentages -- exactly the kind
+          // of quiet drift between a mock and the real contract this file exists to avoid.
           warmup: [
-            { percentOfWorking: 27, reps: 10, isOptional: false },
-            { percentOfWorking: 53, reps: 5, isOptional: false },
-            { percentOfWorking: 80, reps: 3, isOptional: true },
+            { percentOfWorking: 0.27, reps: 10, isOptional: false },
+            { percentOfWorking: 0.53, reps: 5, isOptional: false },
+            { percentOfWorking: 0.8, reps: 3, isOptional: true },
           ],
           notes: null,
         },
@@ -125,8 +129,8 @@ export const program: Program = {
           restMinSeconds: 90,
           restMaxSeconds: 120,
           warmup: [
-            { percentOfWorking: 45, reps: 10, isOptional: false },
-            { percentOfWorking: 63, reps: 5, isOptional: false },
+            { percentOfWorking: 0.45, reps: 10, isOptional: false },
+            { percentOfWorking: 0.63, reps: 5, isOptional: false },
           ],
           notes: null,
         },

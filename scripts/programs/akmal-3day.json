@@ -1,0 +1,299 @@
+{
+  "$comment": [
+    "The author's own 3-day muscle-gain program, as given: 21 + 20 + 20 = 61 working sets a week.",
+    "",
+    "Exercises are named by catalog SLUG, not id. seed-program.sh resolves them against",
+    "GET /api/exercises at run time, so this file stays readable and survives a reseeded database.",
+    "",
+    "percentOfWorking is a FRACTION, not a percentage: the domain requires 0 < p < 1, so 53% is",
+    "0.53. Where the program gave a range (40-50%), the midpoint is used, because a prescription",
+    "holds one number per warm-up step. Percentages must increase strictly from step to step.",
+    "",
+    "Rest is in seconds, min and max. The program's own REST section overrides the per-exercise",
+    "line where the two disagree -- e.g. bench says 'dam 3 min' in the exercise list and '2.5-3",
+    "min' in the REST table, so 150-180 is used.",
+    "",
+    "One thing this file CANNOT express faithfully: Back Squat's first warm-up is 'bo'sh shtanga",
+    "(odatda 20 kg)' -- an absolute weight, not a fraction of the working weight. Warm-up steps are",
+    "percentages only, so 0.25 stands in for it. At a 100 kg squat that resolves to 25 kg rather",
+    "than the bar's 20 kg. Adjust the number to taste, or log that first set by hand."
+  ],
+  "name": "3 kunlik muscle-gain",
+  "days": [
+    {
+      "label": "Dushanba — Upper Body",
+      "dayOfWeek": "Monday",
+      "prescriptions": [
+        {
+          "exercise": "incline-dumbbell-press",
+          "workingSetCount": 3,
+          "repMin": 6,
+          "repMax": 8,
+          "restMinSeconds": 150,
+          "restMaxSeconds": 180,
+          "warmup": [
+            { "percentOfWorking": 0.45, "reps": 10, "isOptional": false },
+            { "percentOfWorking": 0.65, "reps": 5, "isOptional": false },
+            { "percentOfWorking": 0.82, "reps": 3, "isOptional": false }
+          ],
+          "notes": null
+        },
+        {
+          "exercise": "chest-supported-row",
+          "workingSetCount": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "restMinSeconds": 120,
+          "restMaxSeconds": 180,
+          "warmup": [{ "percentOfWorking": 0.55, "reps": 7, "isOptional": false }],
+          "notes": null
+        },
+        {
+          "exercise": "lat-pulldown",
+          "alternative": "pull-up",
+          "workingSetCount": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "restMinSeconds": 120,
+          "restMaxSeconds": 120,
+          "warmup": [{ "percentOfWorking": 0.55, "reps": 6, "isOptional": true }],
+          "notes": null
+        },
+        {
+          "exercise": "seated-dumbbell-shoulder-press",
+          "workingSetCount": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "restMinSeconds": 120,
+          "restMaxSeconds": 180,
+          "warmup": [{ "percentOfWorking": 0.55, "reps": 6, "isOptional": false }],
+          "notes": null
+        },
+        {
+          "exercise": "machine-chest-press",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 120,
+          "restMaxSeconds": 120,
+          "warmup": [{ "percentOfWorking": 0.55, "reps": 5, "isOptional": true }],
+          "notes": null
+        },
+        {
+          "exercise": "dumbbell-lateral-raise",
+          "workingSetCount": 3,
+          "repMin": 12,
+          "repMax": 15,
+          "restMinSeconds": 60,
+          "restMaxSeconds": 90,
+          "warmup": [],
+          "notes": null
+        },
+        {
+          "exercise": "ez-bar-curl",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 60,
+          "restMaxSeconds": 120,
+          "warmup": [{ "percentOfWorking": 0.5, "reps": 6, "isOptional": false }],
+          "notes": null
+        },
+        {
+          "exercise": "rope-triceps-pushdown",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 60,
+          "restMaxSeconds": 120,
+          "warmup": [],
+          "notes": null
+        }
+      ]
+    },
+    {
+      "label": "Chorshanba — Legs + Core",
+      "dayOfWeek": "Wednesday",
+      "prescriptions": [
+        {
+          "exercise": "back-squat",
+          "workingSetCount": 3,
+          "repMin": 6,
+          "repMax": 8,
+          "restMinSeconds": 180,
+          "restMaxSeconds": 240,
+          "warmup": [
+            { "percentOfWorking": 0.25, "reps": 10, "isOptional": false },
+            { "percentOfWorking": 0.55, "reps": 5, "isOptional": false },
+            { "percentOfWorking": 0.78, "reps": 3, "isOptional": false }
+          ],
+          "notes": "Birinchi warm-up bo'sh shtanga uchun — 0.25 taxminiy."
+        },
+        {
+          "exercise": "romanian-deadlift",
+          "workingSetCount": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "restMinSeconds": 150,
+          "restMaxSeconds": 180,
+          "warmup": [
+            { "percentOfWorking": 0.45, "reps": 7, "isOptional": false },
+            { "percentOfWorking": 0.75, "reps": 3, "isOptional": false }
+          ],
+          "notes": null
+        },
+        {
+          "exercise": "leg-press",
+          "alternative": "walking-lunge",
+          "workingSetCount": 3,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 120,
+          "restMaxSeconds": 180,
+          "warmup": [
+            { "percentOfWorking": 0.45, "reps": 8, "isOptional": false },
+            { "percentOfWorking": 0.75, "reps": 4, "isOptional": true }
+          ],
+          "notes": null
+        },
+        {
+          "exercise": "leg-curl",
+          "workingSetCount": 3,
+          "repMin": 10,
+          "repMax": 15,
+          "restMinSeconds": 90,
+          "restMaxSeconds": 120,
+          "warmup": [{ "percentOfWorking": 0.45, "reps": 9, "isOptional": false }],
+          "notes": null
+        },
+        {
+          "exercise": "standing-calf-raise",
+          "workingSetCount": 3,
+          "repMin": 12,
+          "repMax": 15,
+          "restMinSeconds": 60,
+          "restMaxSeconds": 120,
+          "warmup": [{ "percentOfWorking": 0.5, "reps": 8, "isOptional": true }],
+          "notes": null
+        },
+        {
+          "exercise": "hanging-leg-raise",
+          "workingSetCount": 3,
+          "repMin": 10,
+          "repMax": 15,
+          "restMinSeconds": 60,
+          "restMaxSeconds": 120,
+          "warmup": [],
+          "notes": null
+        },
+        {
+          "exercise": "cable-crunch",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 15,
+          "restMinSeconds": 60,
+          "restMaxSeconds": 120,
+          "warmup": [],
+          "notes": null
+        }
+      ]
+    },
+    {
+      "label": "Juma — Full Body",
+      "dayOfWeek": "Friday",
+      "prescriptions": [
+        {
+          "exercise": "flat-barbell-bench-press",
+          "workingSetCount": 3,
+          "repMin": 6,
+          "repMax": 8,
+          "restMinSeconds": 150,
+          "restMaxSeconds": 180,
+          "warmup": [
+            { "percentOfWorking": 0.27, "reps": 10, "isOptional": false },
+            { "percentOfWorking": 0.53, "reps": 6, "isOptional": false },
+            { "percentOfWorking": 0.8, "reps": 3, "isOptional": false }
+          ],
+          "notes": "27/53/80% — 80 kg da 20/40/62.5 ga tushadi."
+        },
+        {
+          "exercise": "seated-cable-row",
+          "workingSetCount": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "restMinSeconds": 150,
+          "restMaxSeconds": 180,
+          "warmup": [{ "percentOfWorking": 0.55, "reps": 7, "isOptional": false }],
+          "notes": null
+        },
+        {
+          "exercise": "lat-pulldown",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 120,
+          "restMaxSeconds": 120,
+          "warmup": [],
+          "notes": null
+        },
+        {
+          "exercise": "leg-press",
+          "alternative": "bulgarian-split-squat",
+          "workingSetCount": 3,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 150,
+          "restMaxSeconds": 180,
+          "warmup": [
+            { "percentOfWorking": 0.45, "reps": 8, "isOptional": false },
+            { "percentOfWorking": 0.75, "reps": 4, "isOptional": true }
+          ],
+          "notes": null
+        },
+        {
+          "exercise": "pec-deck",
+          "alternative": "incline-cable-fly",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 15,
+          "restMinSeconds": 120,
+          "restMaxSeconds": 120,
+          "warmup": [{ "percentOfWorking": 0.5, "reps": 6, "isOptional": false }],
+          "notes": null
+        },
+        {
+          "exercise": "dumbbell-lateral-raise",
+          "alternative": "rear-delt-fly",
+          "workingSetCount": 3,
+          "repMin": 12,
+          "repMax": 15,
+          "restMinSeconds": 90,
+          "restMaxSeconds": 120,
+          "warmup": [],
+          "notes": null
+        },
+        {
+          "exercise": "incline-dumbbell-curl",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 90,
+          "restMaxSeconds": 120,
+          "warmup": [],
+          "notes": null
+        },
+        {
+          "exercise": "overhead-ez-bar-triceps-extension",
+          "alternative": "overhead-rope-triceps-extension",
+          "workingSetCount": 2,
+          "repMin": 10,
+          "repMax": 12,
+          "restMinSeconds": 90,
+          "restMaxSeconds": 120,
+          "warmup": [{ "percentOfWorking": 0.5, "reps": 7, "isOptional": false }],
+          "notes": null
+        }
+      ]
+    }
+  ]
+}
