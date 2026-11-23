@@ -22,7 +22,7 @@ public static class TelegramAuthEndpoints
         {
             var result = await handler.HandleAsync(new AuthenticateWithTelegramCommand(request.InitData), ct);
             return result.ToHttpResult();
-        }).WithMetadata(new RequestSizeLimitAttribute(8 * 1024));
+        }).Produces<AuthTokensResponse>().WithMetadata(new RequestSizeLimitAttribute(8 * 1024));
 
         group.MapPost("/refresh", async (
             RefreshRequest request,
@@ -31,6 +31,6 @@ public static class TelegramAuthEndpoints
         {
             var result = await handler.HandleAsync(new RefreshTokensCommand(request.RefreshToken), ct);
             return result.ToHttpResult();
-        }).WithMetadata(new RequestSizeLimitAttribute(2 * 1024));
+        }).Produces<AuthTokensResponse>().WithMetadata(new RequestSizeLimitAttribute(2 * 1024));
     }
 }

@@ -36,7 +36,7 @@ public static class ProfileEndpoints
         {
             var result = await handler.HandleAsync(new GetProfileQuery(currentUser.UserId), ct);
             return result.ToHttpResult();
-        });
+        }).Produces<ProfileResponse>();
 
         group.MapPatch("", async (
             UpdateProfileRequest request,
@@ -50,7 +50,7 @@ public static class ProfileEndpoints
                 request.SessionMinutes, request.TimeZoneId), ct);
 
             return result.ToHttpResult();
-        }).WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
+        }).Produces<ProfileResponse>().WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapDelete("", async (
             ICurrentUser me, ICommandHandler<DeleteAccountCommand> handler, CancellationToken ct) =>

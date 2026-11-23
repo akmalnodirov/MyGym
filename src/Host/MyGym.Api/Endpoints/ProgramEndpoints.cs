@@ -33,13 +33,15 @@ public static class ProgramEndpoints
                 new CreateProgramCommand(me.UserId, request.Name, request.Days), ct);
 
             return result.ToHttpResult(program => Results.Created($"/api/programs/{program.Id}", program));
-        }).WithMetadata(new RequestSizeLimitAttribute(256 * 1024));
+        }).Produces<ProgramResponse>(StatusCodes.Status201Created)
+          .WithMetadata(new RequestSizeLimitAttribute(256 * 1024));
 
         group.MapGet("", async (
             ICurrentUser me,
             IQueryHandler<ListProgramsQuery, IReadOnlyList<ProgramSummaryResponse>> handler,
             CancellationToken ct) =>
-            (await handler.HandleAsync(new ListProgramsQuery(me.UserId), ct)).ToHttpResult());
+            (await handler.HandleAsync(new ListProgramsQuery(me.UserId), ct)).ToHttpResult())
+            .Produces<IReadOnlyList<ProgramSummaryResponse>>();
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -49,7 +51,7 @@ public static class ProgramEndpoints
         {
             var result = await handler.HandleAsync(new GetProgramQuery(me.UserId, ProgramId.From(id)), ct);
             return result.ToHttpResult();
-        });
+        }).Produces<ProgramResponse>();
 
         group.MapPut("/{id:guid}", async (
             Guid id,
@@ -62,7 +64,8 @@ public static class ProgramEndpoints
                 new ReplaceProgramCommand(me.UserId, ProgramId.From(id), request.Name, request.Days), ct);
 
             return result.ToHttpResult();
-        }).WithMetadata(new RequestSizeLimitAttribute(256 * 1024));
+        }).Produces<ProgramResponse>()
+          .WithMetadata(new RequestSizeLimitAttribute(256 * 1024));
 
         group.MapPost("/{id:guid}/activate", async (
             Guid id, ICurrentUser me, ICommandHandler<ActivateProgramCommand> handler, CancellationToken ct) =>
@@ -93,7 +96,7 @@ public static class ProgramEndpoints
         {
             var result = await handler.HandleAsync(new ForkProgramCommand(me.UserId, ProgramId.From(id)), ct);
             return result.ToHttpResult(fork => Results.Created($"/api/programs/{fork.Id}", fork));
-        });
+        }).Produces<ProgramResponse>(StatusCodes.Status201Created);
 
         group.MapGet("/{id:guid}/days/{dayId:guid}/preview", async (
             Guid id,
@@ -106,6 +109,6 @@ public static class ProgramEndpoints
                 new PreviewProgramDayQuery(me.UserId, ProgramId.From(id), ProgramDayId.From(dayId)), ct);
 
             return result.ToHttpResult();
-        });
+        }).Produces<DayPreviewResponse>();
     }
 }

@@ -39,6 +39,12 @@ builder.Services.AddValidatedAppSettings(builder.Configuration);
 // handler as a NullReferenceException (500) or a silently-accepted default instead of a 400.
 builder.Services.AddValidation();
 
+// The Mini App generates its TypeScript request/response types from this document, so a server-side
+// rename becomes a client compile error instead of a runtime surprise. Document generation is
+// registered unconditionally (it is inert without MapOpenApi) but only served in Development --
+// the API surface is not public documentation.
+builder.Services.AddOpenApi();
+
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
@@ -248,7 +254,14 @@ app.UseRateLimiter();
 // for why an endpoint filter could not do this.
 app.UseTelegramWebhookSecretGuard();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+// Served only in Development, at /openapi/v1.json. The Mini App's `npm run api:types` reads it
+// from a locally running host; CI reads it from `dotnet run` against the Development environment.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi().AllowAnonymous();
+}
+
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous().ExcludeFromDescription();
 
 // Auth and profile endpoints (Task 11). Tasks 12-14 append their own MapXEndpoints() calls here.
 app.MapAuthEndpoints();

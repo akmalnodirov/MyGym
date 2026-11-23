@@ -63,6 +63,11 @@ public static class TelegramWebhookEndpoints
                 return Results.Ok();
             })
             .AllowAnonymous()
+            // Kept out of the OpenAPI document. Telegram.Bot's Update is the root of a ~90-type
+            // graph (Sticker, Giveaway, PassportData, ...) which would otherwise dominate the
+            // document and the TypeScript the Mini App generates from it. This endpoint is
+            // Telegram's contract, not ours, and no client of ours ever calls it.
+            .ExcludeFromDescription()
             .WithMetadata(new RequestSizeLimitAttribute(64 * 1024));
     }
 

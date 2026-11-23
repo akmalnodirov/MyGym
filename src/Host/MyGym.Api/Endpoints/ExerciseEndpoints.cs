@@ -12,6 +12,7 @@ public static class ExerciseEndpoints
                 IExerciseCatalogQueries catalog,
                 CancellationToken ct) =>
             Results.Ok(await catalog.SearchAsync(q, lang ?? "en", ct)))
+            .Produces<IReadOnlyList<ExerciseSummary>>()
             .RequireAuthorization();
     }
 }

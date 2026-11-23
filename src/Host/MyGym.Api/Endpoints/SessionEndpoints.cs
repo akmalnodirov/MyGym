@@ -43,7 +43,8 @@ public static class SessionEndpoints
                 request.Bodyweight), ct);
 
             return result.ToHttpResult(session => Results.Created($"/api/sessions/{session.Id}", session));
-        }).WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
+        }).Produces<SessionResponse>(StatusCodes.Status201Created)
+          .WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapGet("/current", async (
             ICurrentUser me,
@@ -53,7 +54,9 @@ public static class SessionEndpoints
             var result = await handler.HandleAsync(new GetCurrentSessionQuery(me.UserId), ct);
             return result.ToHttpResult(session =>
                 session is null ? Results.NoContent() : Results.Ok(session));
-        });
+        // 204 is the "no workout in progress" answer, and is a normal state rather than an error —
+        // the Mini App's Today screen branches on exactly this.
+        }).Produces<SessionResponse>().Produces(StatusCodes.Status204NoContent);
 
         group.MapGet("", async (
             DateTimeOffset? from,
@@ -68,7 +71,7 @@ public static class SessionEndpoints
                 new ListSessionsQuery(me.UserId, from, to, page ?? 1, pageSize ?? 20), ct);
 
             return result.ToHttpResult();
-        });
+        }).Produces<IReadOnlyList<SessionSummaryResponse>>();
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -76,7 +79,8 @@ public static class SessionEndpoints
             IQueryHandler<GetSessionQuery, SessionResponse> handler,
             CancellationToken ct) =>
             (await handler.HandleAsync(new GetSessionQuery(me.UserId, SessionId.From(id)), ct))
-                .ToHttpResult());
+                .ToHttpResult())
+            .Produces<SessionResponse>();
 
         group.MapPost("/{id:guid}/exercises", async (
             Guid id,
@@ -95,7 +99,8 @@ public static class SessionEndpoints
             // header pointed at a route that 404s. Point it at the session itself, which is the
             // nearest resource that actually resolves and already contains the new exercise.
             return result.ToHttpResult(added => Results.Created($"/api/sessions/{id}", added));
-        }).WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
+        }).Produces<AddedExerciseResponse>(StatusCodes.Status201Created)
+          .WithMetadata(new RequestSizeLimitAttribute(4 * 1024));
 
         group.MapPost("/{id:guid}/exercises/{exerciseId:guid}/sets", async (
             Guid id,
@@ -111,7 +116,8 @@ public static class SessionEndpoints
 
             return result.ToHttpResult(set => Results.Created(
                 $"/api/sessions/{id}/exercises/{exerciseId}/sets/{set.Id}", set));
-        }).WithMetadata(new RequestSizeLimitAttribute(2 * 1024));
+        }).Produces<LoggedSetResponse>(StatusCodes.Status201Created)
+          .WithMetadata(new RequestSizeLimitAttribute(2 * 1024));
 
         group.MapPatch("/{id:guid}/exercises/{exerciseId:guid}/sets/{setId:guid}", async (
             Guid id, Guid exerciseId, Guid setId, EditSetRequest request,
