@@ -141,10 +141,20 @@ Two facts about the document that the client design depends on:
 
 - `PreviewExerciseResponse` and `SessionExerciseResponse` identify exercises by `ExerciseId` only.
   **There is no exercise name in either.** The client must hold the catalog and join. See §8.
-- `SessionExerciseResponse.SuggestedWorkingWeight` is a bare `number`. **The unit is not on it.** It
-  is the athlete's `PreferredUnit` from `GET /api/me`, so the profile must be loaded before any
-  weight is rendered. `LoggedSetResponse`, by contrast, carries its own `Unit`, because a set logged
+- `SessionExerciseResponse.suggestedWorkingWeight` is a bare `number | null`. **The unit is not on
+  it**, so it is the athlete's `preferredUnit` from `GET /api/me` and the profile must be loaded
+  before any weight on a session screen renders. Two neighbouring types differ here and the
+  difference is easy to get wrong: `PreviewExerciseResponse` *does* carry `weightUnit`, so the day
+  preview needs no profile; and `LoggedSetResponse` carries its own `unit`, because a set logged
   last month may have been logged in the other unit.
+- **Property names are camelCase and enums are string unions.** `dayOfWeek` is
+  `"Sunday" | … | "Saturday" | null`, `unit` is `"Kilograms" | "Pounds"`, `kind` is
+  `"Warmup" | "Working"`. The weekday mapping to JavaScript's `Date.getDay()` must therefore be an
+  explicit table, not a cast.
+- **Numbers are numbers.** .NET initially described every `int` and `decimal` as
+  `number | string`, because its deserialiser accepts quoted numbers on input. A schema transformer
+  (`366fcce`) narrows those to the numeric type while preserving `null`, so the client does no
+  coercion and `rir`/`suggestedWorkingWeight` still force the absent case to be handled.
 
 ---
 
