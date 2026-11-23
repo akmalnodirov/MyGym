@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import "./app.css";
 
 async function start(): Promise<void> {
   // Mocks are opt-in and dynamically imported, so no handler, fixture or worker reaches the
