@@ -34,8 +34,12 @@ describe("the retry policy", () => {
     expect(shouldRetry(2, new TypeError("Failed to fetch"))).toBe(true);
   });
 
-  test("gives up after three attempts", () => {
-    expect(shouldRetry(3, new TypeError("Failed to fetch"))).toBe(false);
+  test("gives up after three retries, which is four requests in total", () => {
+    // failureCount starts at 0, so these four calls describe requests 1 through 4.
+    expect(shouldRetry(0, new TypeError("x"))).toBe(true);
+    expect(shouldRetry(1, new TypeError("x"))).toBe(true);
+    expect(shouldRetry(2, new TypeError("x"))).toBe(true);
+    expect(shouldRetry(3, new TypeError("x"))).toBe(false);
   });
 
   test("retries 5xx and 429 but no other 4xx", () => {

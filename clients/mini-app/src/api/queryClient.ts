@@ -1,7 +1,12 @@
 import { QueryClient } from "@tanstack/react-query";
 import { ApiError } from "./ApiError";
 
-const MAX_ATTEMPTS = 3;
+/**
+ * Retries, not attempts. TanStack calls `retry(failureCount, error)` with `failureCount` starting
+ * at 0, so three retries means four requests in total. Named for what it is, because reading it
+ * as "attempts" led to a test that quietly passed on the fourth request.
+ */
+const MAX_RETRIES = 3;
 
 /**
  * Decides whether a failure is worth repeating.
@@ -11,7 +16,7 @@ const MAX_ATTEMPTS = 3;
  * failures that could plausibly succeed unchanged are retried.
  */
 export function shouldRetry(failureCount: number, error: unknown): boolean {
-  if (failureCount >= MAX_ATTEMPTS) return false;
+  if (failureCount >= MAX_RETRIES) return false;
 
   // Not an ApiError means the server never answered — a dropped connection in a basement gym,
   // which is exactly the case retrying exists for.

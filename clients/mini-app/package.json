@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "api:types": "openapi-typescript openapi.json -o src/api/generated.ts"
+    "api:types": "openapi-typescript openapi.json -o src/api/generated.ts",
+    "verify": "tsc --noEmit && vitest run"
   },
   "dependencies": {
     "@tanstack/react-query": "5.108.3",
