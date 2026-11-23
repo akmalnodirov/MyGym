@@ -1,0 +1,4 @@
+# Shell scripts must keep LF endings or the shebang line carries a trailing \r
+# and the interpreter is not found. This machine has core.autocrlf enabled, so
+# without this the working copy gets CRLF on the next checkout.
+*.sh text eol=lf
