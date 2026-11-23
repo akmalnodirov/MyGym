@@ -79,7 +79,7 @@ internal sealed class ListSessionsQueryHandler(TrainingDbContext context)
         var rows = sessionRows
             .Select(s => new SessionSummaryResponse(
                 s.Id.Value,
-                s.Status.ToString(),
+                s.Status,
                 s.StartedAt,
                 s.CompletedAt,
                 countsBySession.GetValueOrDefault(s.Id, 0)))

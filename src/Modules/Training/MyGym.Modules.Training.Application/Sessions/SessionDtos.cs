@@ -4,12 +4,18 @@ using MyGym.SharedKernel;
 
 namespace MyGym.Modules.Training.Application.Sessions;
 
+// Kind, Unit and Status below are the enums rather than their ToString(). The wire format is
+// identical -- JsonStringEnumConverter is registered globally, so they still serialise as
+// "Working" / "Kilograms" / "InProgress" -- but the OpenAPI document then describes them as string
+// unions instead of bare `string`. The Mini App branches on exactly these three values (read-only
+// mode on Status, row grouping on Kind, the unit label on Unit), so a typo in any of them is a
+// compile error on the client rather than a silently-false comparison.
 public sealed record LoggedSetResponse(
-    Guid Id, int Order, string Kind, decimal Weight, string Unit, int Reps, int? Rir,
+    Guid Id, int Order, SetKind Kind, decimal Weight, WeightUnit Unit, int Reps, int? Rir,
     Guid ClientSetId, DateTimeOffset LoggedAt)
 {
     public static LoggedSetResponse From(LoggedSet s) => new(
-        s.Id.Value, s.Order, s.Kind.ToString(), s.Weight.Value, s.Weight.Unit.ToString(),
+        s.Id.Value, s.Order, s.Kind, s.Weight.Value, s.Weight.Unit,
         s.Reps, s.Rir, s.ClientSetId, s.LoggedAt);
 }
 
@@ -20,12 +26,12 @@ public sealed record SessionExerciseResponse(
     IReadOnlyList<LoggedSetResponse> Sets);
 
 public sealed record SessionResponse(
-    Guid Id, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt,
+    Guid Id, SessionStatus Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt,
     Guid? ProgramId, int? ProgramRevision, Guid? ProgramDayId, decimal? BodyweightAtSession,
     int WorkingSetCount, IReadOnlyList<SessionExerciseResponse> Exercises);
 
 public sealed record SessionSummaryResponse(
-    Guid Id, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, int WorkingSetCount);
+    Guid Id, SessionStatus Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, int WorkingSetCount);
 
 internal static class SessionMapper
 {
@@ -67,7 +73,7 @@ internal static class SessionMapper
 
         return new SessionResponse(
             session.Id.Value,
-            session.Status.ToString(),
+            session.Status,
             session.StartedAt,
             session.CompletedAt,
             session.Origin.ProgramId?.Value,

@@ -36,8 +36,8 @@ internal sealed class ListProgramsQueryHandler(TrainingDbContext context)
             .Select(p => new ProgramSummaryResponse(
                 p.Id.Value,
                 p.Name,
-                p.Status.ToString(),
-                p.Visibility.ToString(),
+                p.Status,
+                p.Visibility,
                 EF.Property<List<ProgramDay>>(p, "_days").Count,
                 p.OwnerUserId == query.Actor))
             .ToListAsync(ct);

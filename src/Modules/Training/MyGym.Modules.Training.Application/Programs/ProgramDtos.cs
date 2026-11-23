@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using MyGym.Modules.Training.Domain.Programs;
 using MyGym.Modules.Training.Domain.ValueObjects;
+using MyGym.SharedKernel;
 
 namespace MyGym.Modules.Training.Application.Programs;
 
@@ -49,23 +50,24 @@ public sealed record ProgramDayResponse(
 }
 
 public sealed record ProgramResponse(
-    Guid Id, string Name, string Status, string Visibility, int RevisionNumber,
+    Guid Id, string Name, ProgramStatus Status, ProgramVisibility Visibility, int RevisionNumber,
     Guid? ForkedFromProgramId, IReadOnlyList<ProgramDayResponse> Days)
 {
     public static ProgramResponse From(TrainingProgram p) => new(
-        p.Id.Value, p.Name, p.Status.ToString(), p.Visibility.ToString(), p.RevisionNumber,
+        p.Id.Value, p.Name, p.Status, p.Visibility, p.RevisionNumber,
         p.ForkedFromProgramId?.Value, p.Days.Select(ProgramDayResponse.From).ToList());
 }
 
 public sealed record ProgramSummaryResponse(
-    Guid Id, string Name, string Status, string Visibility, int DayCount, bool IsOwnedByMe);
+    Guid Id, string Name, ProgramStatus Status, ProgramVisibility Visibility, int DayCount,
+    bool IsOwnedByMe);
 
 public sealed record ResolvedWarmupResponse(decimal Weight, int Reps, bool IsOptional);
 
 public sealed record PreviewExerciseResponse(
     Guid ExerciseId, Guid? AlternativeExerciseId, int WorkingSetCount, int TargetRepMin,
     int TargetRepMax, int RestMinSeconds, int RestMaxSeconds, decimal? SuggestedWorkingWeight,
-    string WeightUnit, IReadOnlyList<ResolvedWarmupResponse> Warmup, string? Notes);
+    WeightUnit WeightUnit, IReadOnlyList<ResolvedWarmupResponse> Warmup, string? Notes);
 
 public sealed record DayPreviewResponse(
     Guid ProgramId, Guid DayId, string Label, int RevisionNumber,

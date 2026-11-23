@@ -87,7 +87,7 @@ public sealed class PreviewProgramDayQueryHandler(
                 (int)prescription.Rest.Min.TotalSeconds,
                 (int)prescription.Rest.Max.TotalSeconds,
                 normalizedLastWorking?.Value,
-                preferences.PreferredUnit.ToString(),
+                preferences.PreferredUnit,
                 resolved.Select(r => new ResolvedWarmupResponse(r.Weight.Value, r.Reps, r.IsOptional)).ToList(),
                 prescription.Notes);
         }).ToList();
