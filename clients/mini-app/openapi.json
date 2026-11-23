@@ -1,0 +1,1902 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "MyGym.Api | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:5199/"
+    }
+  ],
+  "paths": {
+    "/api/exercises": {
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExerciseSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/telegram": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramSignInRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/programs": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProgramSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/programs/{id}": {
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/programs/{id}/activate": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/programs/{id}/visibility": {
+      "patch": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/programs/{id}/fork": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/programs/{id}/days/{dayId}/preview": {
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "dayId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayPreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/current": {
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}": {
+      "get": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}/exercises": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddExerciseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddedExerciseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}/exercises/{exerciseId}/sets": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "exerciseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogSetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoggedSetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}/exercises/{exerciseId}/sets/{setId}": {
+      "patch": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "exerciseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "setId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditSetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "exerciseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "setId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}/complete": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}/abandon": {
+      "post": {
+        "tags": [
+          "MyGym.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddedExerciseResponse": {
+        "required": [
+          "sessionExerciseId"
+        ],
+        "type": "object",
+        "properties": {
+          "sessionExerciseId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "AddExerciseRequest": {
+        "required": [
+          "exerciseId",
+          "workingSetCount",
+          "repMin",
+          "repMax",
+          "restMinSeconds",
+          "restMaxSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "exerciseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workingSetCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repMin": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repMax": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMinSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMaxSeconds": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AuthTokensResponse": {
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "accessTokenExpiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "accessTokenExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DayOfWeek": {
+        "enum": [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          null
+        ]
+      },
+      "DayPreviewResponse": {
+        "required": [
+          "programId",
+          "dayId",
+          "label",
+          "revisionNumber",
+          "exercises"
+        ],
+        "type": "object",
+        "properties": {
+          "programId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dayId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "revisionNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exercises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewExerciseResponse"
+            }
+          }
+        }
+      },
+      "EditSetRequest": {
+        "required": [
+          "weight",
+          "reps",
+          "rir"
+        ],
+        "type": "object",
+        "properties": {
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rir": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ExerciseSummary": {
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "equipment",
+          "primaryMuscles"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "equipment": {
+            "type": "string"
+          },
+          "primaryMuscles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ExperienceLevel": {
+        "enum": [
+          "Beginner",
+          "Intermediate",
+          "Advanced"
+        ]
+      },
+      "LoggedSetResponse": {
+        "required": [
+          "id",
+          "order",
+          "kind",
+          "weight",
+          "unit",
+          "reps",
+          "rir",
+          "clientSetId",
+          "loggedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SetKind"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/WeightUnit"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rir": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "clientSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "loggedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LogSetRequest": {
+        "required": [
+          "clientSetId",
+          "kind",
+          "weight",
+          "reps",
+          "rir"
+        ],
+        "type": "object",
+        "properties": {
+          "clientSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SetKind"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rir": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PrescriptionInput": {
+        "required": [
+          "exerciseId",
+          "alternativeExerciseId",
+          "workingSetCount",
+          "repMin",
+          "repMax",
+          "restMinSeconds",
+          "restMaxSeconds",
+          "warmup",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "exerciseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alternativeExerciseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "workingSetCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repMin": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repMax": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMinSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMaxSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warmup": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarmupStepInput"
+            }
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PrescriptionResponse": {
+        "required": [
+          "id",
+          "order",
+          "exerciseId",
+          "alternativeExerciseId",
+          "workingSetCount",
+          "repMin",
+          "repMax",
+          "restMinSeconds",
+          "restMaxSeconds",
+          "warmup",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exerciseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alternativeExerciseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "workingSetCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repMin": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repMax": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMinSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMaxSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warmup": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarmupStepResponse"
+            }
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PreviewExerciseResponse": {
+        "required": [
+          "exerciseId",
+          "alternativeExerciseId",
+          "workingSetCount",
+          "targetRepMin",
+          "targetRepMax",
+          "restMinSeconds",
+          "restMaxSeconds",
+          "suggestedWorkingWeight",
+          "weightUnit",
+          "warmup",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "exerciseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alternativeExerciseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "workingSetCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetRepMin": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetRepMax": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMinSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMaxSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "suggestedWorkingWeight": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "weightUnit": {
+            "$ref": "#/components/schemas/WeightUnit"
+          },
+          "warmup": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedWarmupResponse"
+            }
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ProfileResponse": {
+        "required": [
+          "id",
+          "firstName",
+          "username",
+          "languageCode",
+          "birthYear",
+          "bodyweight",
+          "preferredUnit",
+          "loadingIncrement",
+          "experienceLevel",
+          "availableDaysPerWeek",
+          "sessionMinutes",
+          "timeZoneId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "username": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "languageCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "birthYear": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "bodyweight": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "preferredUnit": {
+            "$ref": "#/components/schemas/WeightUnit"
+          },
+          "loadingIncrement": {
+            "type": "number",
+            "format": "double"
+          },
+          "experienceLevel": {
+            "$ref": "#/components/schemas/ExperienceLevel"
+          },
+          "availableDaysPerWeek": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "sessionMinutes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "timeZoneId": {
+            "type": "string"
+          }
+        }
+      },
+      "ProgramDayInput": {
+        "required": [
+          "label",
+          "dayOfWeek",
+          "prescriptions"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DayOfWeek"
+              }
+            ]
+          },
+          "prescriptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrescriptionInput"
+            }
+          }
+        }
+      },
+      "ProgramDayResponse": {
+        "required": [
+          "id",
+          "order",
+          "label",
+          "dayOfWeek",
+          "prescriptions"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "label": {
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DayOfWeek"
+              }
+            ]
+          },
+          "prescriptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrescriptionResponse"
+            }
+          }
+        }
+      },
+      "ProgramResponse": {
+        "required": [
+          "id",
+          "name",
+          "status",
+          "visibility",
+          "revisionNumber",
+          "forkedFromProgramId",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProgramStatus"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/ProgramVisibility"
+          },
+          "revisionNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "forkedFromProgramId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramDayResponse"
+            }
+          }
+        }
+      },
+      "ProgramStatus": {
+        "enum": [
+          "Draft",
+          "Active",
+          "Archived"
+        ]
+      },
+      "ProgramSummaryResponse": {
+        "required": [
+          "id",
+          "name",
+          "status",
+          "visibility",
+          "dayCount",
+          "isOwnedByMe"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProgramStatus"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/ProgramVisibility"
+          },
+          "dayCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isOwnedByMe": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProgramVisibility": {
+        "enum": [
+          "Private",
+          "Public"
+        ]
+      },
+      "RefreshRequest": {
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "ResolvedWarmupResponse": {
+        "required": [
+          "weight",
+          "reps",
+          "isOptional"
+        ],
+        "type": "object",
+        "properties": {
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isOptional": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SaveProgramRequest": {
+        "required": [
+          "name",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramDayInput"
+            }
+          }
+        }
+      },
+      "SessionExerciseResponse": {
+        "required": [
+          "id",
+          "order",
+          "exerciseId",
+          "alternativeExerciseId",
+          "workingSetCount",
+          "targetRepMin",
+          "targetRepMax",
+          "restMinSeconds",
+          "restMaxSeconds",
+          "suggestedWarmup",
+          "suggestedWorkingWeight",
+          "sets"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exerciseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alternativeExerciseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "workingSetCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetRepMin": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetRepMax": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMinSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "restMaxSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "suggestedWarmup": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedWarmupResponse"
+            }
+          },
+          "suggestedWorkingWeight": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "sets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LoggedSetResponse"
+            }
+          }
+        }
+      },
+      "SessionResponse": {
+        "required": [
+          "id",
+          "status",
+          "startedAt",
+          "completedAt",
+          "programId",
+          "programRevision",
+          "programDayId",
+          "bodyweightAtSession",
+          "workingSetCount",
+          "exercises"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "programId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "programRevision": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "programDayId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bodyweightAtSession": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "workingSetCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exercises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionExerciseResponse"
+            }
+          }
+        }
+      },
+      "SessionStatus": {
+        "enum": [
+          "InProgress",
+          "Completed",
+          "Abandoned"
+        ]
+      },
+      "SessionSummaryResponse": {
+        "required": [
+          "id",
+          "status",
+          "startedAt",
+          "completedAt",
+          "workingSetCount"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "workingSetCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SetKind": {
+        "enum": [
+          "Warmup",
+          "Working"
+        ]
+      },
+      "SetVisibilityRequest": {
+        "required": [
+          "visibility"
+        ],
+        "type": "object",
+        "properties": {
+          "visibility": {
+            "$ref": "#/components/schemas/ProgramVisibility"
+          }
+        }
+      },
+      "StartSessionRequest": {
+        "required": [
+          "programId",
+          "programDayId",
+          "bodyweight"
+        ],
+        "type": "object",
+        "properties": {
+          "programId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "programDayId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bodyweight": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "TelegramSignInRequest": {
+        "required": [
+          "initData"
+        ],
+        "type": "object",
+        "properties": {
+          "initData": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateProfileRequest": {
+        "required": [
+          "birthYear",
+          "bodyweight",
+          "preferredUnit",
+          "loadingIncrement",
+          "experienceLevel",
+          "availableDaysPerWeek",
+          "sessionMinutes",
+          "timeZoneId"
+        ],
+        "type": "object",
+        "properties": {
+          "birthYear": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "bodyweight": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "preferredUnit": {
+            "$ref": "#/components/schemas/WeightUnit"
+          },
+          "loadingIncrement": {
+            "type": "number",
+            "format": "double"
+          },
+          "experienceLevel": {
+            "$ref": "#/components/schemas/ExperienceLevel"
+          },
+          "availableDaysPerWeek": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "sessionMinutes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "timeZoneId": {
+            "type": "string"
+          }
+        }
+      },
+      "WarmupStepInput": {
+        "required": [
+          "percentOfWorking",
+          "reps",
+          "isOptional"
+        ],
+        "type": "object",
+        "properties": {
+          "percentOfWorking": {
+            "type": "number",
+            "format": "double"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isOptional": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WarmupStepResponse": {
+        "required": [
+          "percentOfWorking",
+          "reps",
+          "isOptional"
+        ],
+        "type": "object",
+        "properties": {
+          "percentOfWorking": {
+            "type": "number",
+            "format": "double"
+          },
+          "reps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isOptional": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WeightUnit": {
+        "enum": [
+          "Kilograms",
+          "Pounds"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "MyGym.Api"
+    }
+  ]
+}

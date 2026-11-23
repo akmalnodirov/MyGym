@@ -2,3 +2,8 @@
 # and the interpreter is not found. This machine has core.autocrlf enabled, so
 # without this the working copy gets CRLF on the next checkout.
 *.sh text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.json text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
