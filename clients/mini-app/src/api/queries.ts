@@ -31,11 +31,14 @@ export function useProgramSummaries(): UseQueryResult<ProgramSummary[]> {
   });
 }
 
-export function useProgram(id: string): UseQueryResult<Program> {
+export function useProgram(id: string, options?: { enabled?: boolean }): UseQueryResult<Program> {
   const api = useApi();
   return useQuery({
     queryKey: qk.program(id),
     queryFn: () => api.request<Program>(`/programs/${id}`),
+    // Today's screen only knows the program id after its summary list arrives, so the query has to
+    // be declarable before it is runnable.
+    enabled: (options?.enabled ?? true) && id.length > 0,
   });
 }
 
