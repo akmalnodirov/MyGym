@@ -8,3 +8,9 @@
 *.css  text eol=lf
 *.html text eol=lf
 *.py  text eol=lf
+# Docker reads the Dockerfile and Caddy reads the Caddyfile from the working copy, not from the
+# index, so CRLF here would reach the tools themselves -- a trailing \r on a RUN line is a real
+# source of confusing build failures on Linux.
+Dockerfile text eol=lf
+Caddyfile  text eol=lf
+*.yml      text eol=lf
