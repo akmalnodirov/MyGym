@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using MyGym.Api;
 using MyGym.Api.Auth;
 using MyGym.Api.Endpoints;
+using MyGym.Api.OpenApi;
 using MyGym.Modules.ExerciseCatalog.Infrastructure;
 using MyGym.Modules.Identity.Application;
 using MyGym.Modules.Identity.Infrastructure;
@@ -43,7 +44,7 @@ builder.Services.AddValidation();
 // rename becomes a client compile error instead of a runtime surprise. Document generation is
 // registered unconditionally (it is inert without MapOpenApi) but only served in Development --
 // the API surface is not public documentation.
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddSchemaTransformer<NumericSchemaTransformer>());
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
