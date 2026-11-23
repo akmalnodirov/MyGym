@@ -24,7 +24,29 @@ services:
       Jwt__Audience: mygym-miniapp
       Jwt__SigningKey: "${JWT_SIGNING_KEY}"
       MiniApp__Url: "${MINIAPP_URL}"
-    ports: ["8080:8080"]
+    # Not published to the host in a deployment: `web` reaches it over the compose network, and
+    # exposing 8080 would let the API be called directly, bypassing the proxy. Uncomment to debug.
+    # ports: ["8080:8080"]
+    expose: ["8080"]
+
+  # Caddy serves the built Mini App and proxies /api to the API, so both live on one origin --
+  # which is why CORS is configured nowhere. Caddy also obtains the TLS certificate that Telegram
+  # requires for both the Mini App URL and the webhook.
+  web:
+    build:
+      context: ./clients/mini-app
+    depends_on: [api]
+    environment:
+      MYGYM_DOMAIN: "${MYGYM_DOMAIN:-localhost}"
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and ACME state. Without this volume every restart re-requests a certificate
+      # and will eventually hit Let's Encrypt's rate limit.
+      - caddy-data:/data
+      - caddy-config:/config
 
 volumes:
   pgdata:
+  caddy-data:
+  caddy-config:

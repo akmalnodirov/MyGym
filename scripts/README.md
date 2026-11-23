@@ -1,6 +1,7 @@
 # scripts
 
-Two scripts, both of which run without a database.
+Three scripts. None of them needs a database; `set-webhook.sh` needs the internet, the other two
+do not.
 
 ## `dump-openapi.sh`
 
@@ -71,3 +72,50 @@ The file is validated against the real domain rules with no server running, by
 `tests/MyGym.Modules.Training.Domain.Tests/SeedProgramFileTests.cs`. A mistyped percentage fails
 there as a unit test rather than arriving as an HTTP 422 from a live API — which matters, since the
 API cannot currently be started on this machine at all.
+
+## `set-webhook.sh`
+
+Registers the bot's webhook with Telegram and sets the chat menu button to open the Mini App.
+
+**Nothing in the application does this.** The webhook endpoint exists and is secret-guarded, but
+Telegram will not send a single update until the URL is registered through the Bot API — a one-time
+call per deployment that is easy to forget and produces a bot that simply never answers.
+
+```bash
+BOT_TOKEN=123456:ABC \
+PUBLIC_URL=https://gym.example.com \
+WEBHOOK_SECRET=<same value as the API's Telegram:WebhookSecretToken> \
+  bash scripts/set-webhook.sh
+```
+
+| Variable | | |
+|---|---|---|
+| `BOT_TOKEN` | required | From [@BotFather](https://t.me/BotFather) |
+| `PUBLIC_URL` | required | The HTTPS origin serving this stack. Must be https — Telegram refuses plain http |
+| `WEBHOOK_SECRET` | optional | Must match the API's `Telegram:WebhookSecretToken`. If omitted, one is generated and printed for you to configure |
+| `MINIAPP_URL` | optional | Default `PUBLIC_URL` |
+| `MENU_BUTTON_TEXT` | optional | Default `MyGym` |
+| `SKIP_MENU_BUTTON` | optional | `1` to leave the menu button alone |
+
+Other modes:
+
+```bash
+BOT_TOKEN=... bash scripts/set-webhook.sh --show     # read the current registration
+BOT_TOKEN=... bash scripts/set-webhook.sh --delete   # stop Telegram sending updates
+```
+
+It always reads the registration back with `getWebhookInfo` and prints it, because **`setWebhook`
+can answer 200 while delivery still fails** — an unreachable host, a certificate Telegram will not
+trust, the API not running. That shows up as `last_error_message`, and nowhere else.
+
+`allowed_updates` is narrowed to `message`, which is all the handler acts on. That is not cosmetic:
+the webhook endpoint caps request bodies, and the update types it would otherwise receive are far
+larger than a message.
+
+### The order these go in
+
+1. Deploy the stack so `PUBLIC_URL` serves over HTTPS (see **Deployment** in the root `README.md`).
+2. `set-webhook.sh` — if it generates a secret, put it in `.env`, restart the API, and run again
+   with `WEBHOOK_SECRET` set to the same value.
+3. `seed-program.sh` — your program.
+4. Send `/start` to the bot.

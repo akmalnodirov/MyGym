@@ -1,0 +1,70 @@
+# MyGym — one origin for the API and the Mini App.
+#
+# Serving both from a single hostname is a design decision, not a convenience: it is the reason
+# CORS is configured nowhere in this repository, and the reason VITE_API_BASE_URL defaults to
+# "/api". Splitting them across hostnames later means configuring CORS on the API first.
+#
+# Set MYGYM_DOMAIN to your real domain. Caddy then provisions and renews a certificate
+# automatically, which Telegram requires: a Mini App URL must be HTTPS, and so must a webhook.
+#
+#   MYGYM_DOMAIN=gym.example.com docker compose up -d
+#
+# With MYGYM_DOMAIN unset it falls back to localhost, where Caddy issues a local certificate. That
+# is fine for poking at the stack yourself and useless for Telegram, which cannot reach localhost.
+
+{$MYGYM_DOMAIN:localhost} {
+	encode zstd gzip
+
+	# ── The API ───────────────────────────────────────────────────────────
+	# Caddy sets X-Forwarded-For and X-Forwarded-Proto. The API trusts them from private ranges
+	# (see ForwardedHeadersOptions in Program.cs), which covers Docker's bridge network — without
+	# that, every request would appear to come from this container and the per-IP rate limiter
+	# would throttle all users as one.
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle /health {
+		reverse_proxy api:8080
+	}
+
+	# ── The Mini App ──────────────────────────────────────────────────────
+	handle {
+		root * /srv
+
+		# Content-hashed filenames, so they can never go stale.
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		# index.html must not be cached, or a deploy would leave clients loading the previous
+		# bundle's asset names.
+		header /index.html Cache-Control "no-cache"
+
+		# A single-page client: unknown paths fall back to index.html rather than 404ing, because
+		# the router owns /sessions/:id and friends, and Telegram can open the app on a
+		# start-parameter path the server knows nothing about.
+		try_files {path} /index.html
+		file_server
+	}
+
+	# ── Headers ───────────────────────────────────────────────────────────
+	header {
+		-Server
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Content-Type-Options "nosniff"
+
+		# Deliberately NO X-Frame-Options and no frame-ancestors restriction. Telegram renders a
+		# Mini App inside its own webview, so forbidding framing — the usual hardening default —
+		# would stop the app opening at all.
+		#
+		# HSTS is left to Caddy, which sets Strict-Transport-Security itself once a real
+		# certificate is in use.
+	}
+
+	log {
+		output stdout
+		# The API logs nothing yet (a known gap), so for now this access log is the only record
+		# that a request happened. Keep it.
+		format console
+	}
+}

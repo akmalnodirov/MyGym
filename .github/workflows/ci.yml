@@ -39,6 +39,19 @@ jobs:
       - name: Build Docker image
         run: docker build -t mygym-api:ci .
 
+      # The reverse proxy is the one piece of this stack that cannot be unit-tested, and a
+      # malformed Caddyfile fails at container start rather than at build -- i.e. in production.
+      # `caddy validate` catches it here instead. MYGYM_DOMAIN has a default, so no secret is
+      # needed to validate.
+      - name: Validate the Caddyfile
+        run: |
+          docker run --rm             -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro"             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+
+      # Builds the client image too, which also proves `npm run build` succeeds inside a clean
+      # container rather than only against this repo's node_modules.
+      - name: Build the Mini App image
+        run: docker build -t mygym-web:ci ./clients/mini-app
+
   mini-app:
     runs-on: ubuntu-latest
     defaults:
